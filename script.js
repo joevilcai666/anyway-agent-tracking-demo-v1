@@ -1,14 +1,17 @@
 /**
  * Anyway Agent Tracking Demo Logic
  * 
- * 1. Generates mock Delivery data with nested Traces and Costs.
- * 2. Renders the main Dashboard (KPIs, Chart, List).
+ * 1. Generates mock Run data (representing "Runs" of a Deliverable).
+ * 2. Renders the main Monitor Dashboard.
  * 3. Handles "Drill-down" interaction to show Trace Details.
  */
 
 // --- Mock Data Generation ---
 
+// "Deliverables" are the products/agents being sold. "Runs" are instances of them.
+const DELIVERABLES = ["Market Analysis Agent", "Code Review Bot", "SEO Generator", "Data Extractor", "Customer Support AI"];
 const CUSTOMERS = ["Acme Corp", "TechStart Inc", "Global AI", "Indie Dev #42", "Apollo Agency"];
+
 const STEPS = [
     { name: "Input Validation", type: "system", baseCost: 0, duration: 0.05 },
     { name: "Context Retrieval (Vector DB)", type: "tool", baseCost: 0.002, duration: 0.3 },
@@ -17,8 +20,8 @@ const STEPS = [
     { name: "Response Formatting", type: "system", baseCost: 0, duration: 0.1 }
 ];
 
-function generateDeliveries(count = 15) {
-    const deliveries = [];
+function generateRuns(count = 15) {
+    const runs = [];
     for (let i = 0; i < count; i++) {
         const isSuccess = Math.random() > 0.1; // 90% success rate
         const stepCount = Math.floor(Math.random() * 4) + 2; // 2-5 steps
@@ -50,28 +53,32 @@ function generateDeliveries(count = 15) {
             totalTokens += tokens;
         }
 
-        deliveries.push({
-            id: `DEL-${10000 + i}`,
+        const deliverableName = DELIVERABLES[Math.floor(Math.random() * DELIVERABLES.length)];
+        const customerName = CUSTOMERS[Math.floor(Math.random() * CUSTOMERS.length)];
+
+        runs.push({
+            id: `RUN-${10000 + i}`,
             timestamp: new Date(Date.now() - i * 1000 * 60 * 45).toLocaleString(), // Spread over time
-            customer: CUSTOMERS[Math.floor(Math.random() * CUSTOMERS.length)],
+            deliverable: deliverableName,
+            customer: customerName,
             status: isSuccess ? "success" : "failed",
             cost: totalCost.toFixed(4),
             duration: totalDuration.toFixed(2),
             tokens: totalTokens,
             trace: trace,
-            output: isSuccess ? `{\n  "result": "Analysis complete",\n  "data_points": ${Math.floor(Math.random() * 10)}\n}` : `{\n  "error": "Timeout",\n  "code": 504\n}`
+            output: isSuccess ? `{\n  "result": "Analysis complete",\n  "agent": "${deliverableName}",\n  "data_points": ${Math.floor(Math.random() * 10)}\n}` : `{\n  "error": "Timeout",\n  "code": 504\n}`
         });
     }
-    return deliveries;
+    return runs;
 }
 
 const state = {
-    deliveries: generateDeliveries(),
-    selectedDelivery: null
+    runs: generateRuns(),
+    selectedRun: null
 };
 
 // --- DOM Elements ---
-const tableBody = document.getElementById('deliveriesTableBody');
+const tableBody = document.getElementById('runsTableBody');
 const tracePanel = document.getElementById('tracePanel');
 const backdrop = document.getElementById('tracePanelBackdrop');
 const closeBtn = document.getElementById('closePanelBtn');
@@ -80,15 +87,18 @@ const chartContainer = document.getElementById('mainChart');
 // --- Rendering Logic ---
 
 function renderTable() {
-    tableBody.innerHTML = state.deliveries.map(d => `
-        <tr onclick="openDeliveryDetail('${d.id}')" data-testid="row-${d.id}">
-            <td class="id-cell">${d.id}</td>
-            <td>${d.timestamp.split(',')[0]}</td>
-            <td>${d.customer}</td>
-            <td><span class="status-badge ${d.status}">${d.status}</span></td>
-            <td>${d.trace.length} steps</td>
-            <td>${d.tokens}</td>
-            <td class="cost-cell">$${d.cost}</td>
+    tableBody.innerHTML = state.runs.map(run => `
+        <tr onclick="openRunDetail('${run.id}')" data-testid="row-${run.id}">
+            <td class="id-cell">${run.id}</td>
+            <td>${run.timestamp.split(',')[0]}</td>
+            <td>
+                <div style="font-weight:500">${run.deliverable}</div>
+                <div style="font-size:11px; color:var(--text-secondary)">${run.customer}</div>
+            </td>
+            <td><span class="status-badge ${run.status}">${run.status}</span></td>
+            <td>${run.trace.length} steps</td>
+            <td>${run.tokens}</td>
+            <td class="cost-cell">$${run.cost}</td>
             <td><button class="view-btn">Trace</button></td>
         </tr>
     `).join('');
@@ -107,26 +117,26 @@ function renderChart() {
     }
 }
 
-function openDeliveryDetail(id) {
-    const delivery = state.deliveries.find(d => d.id === id);
-    if (!delivery) return;
+function openRunDetail(id) {
+    const run = state.runs.find(r => r.id === id);
+    if (!run) return;
 
-    state.selectedDelivery = delivery;
+    state.selectedRun = run;
 
     // Populate Panel Data
-    document.getElementById('detailDeliveryId').textContent = delivery.id;
+    document.getElementById('detailDeliveryId').textContent = run.id;
     const statusEl = document.getElementById('detailStatus');
-    statusEl.textContent = delivery.status;
-    statusEl.className = `status-badge ${delivery.status}`;
+    statusEl.textContent = run.status;
+    statusEl.className = `status-badge ${run.status}`;
     
-    document.getElementById('detailCost').textContent = `$${delivery.cost}`;
-    document.getElementById('detailDuration').textContent = `${delivery.duration}s`;
-    document.getElementById('detailTokens').textContent = delivery.tokens;
-    document.getElementById('detailOutput').textContent = delivery.output;
+    document.getElementById('detailCost').textContent = `$${run.cost}`;
+    document.getElementById('detailDuration').textContent = `${run.duration}s`;
+    document.getElementById('detailTokens').textContent = run.tokens;
+    document.getElementById('detailOutput').textContent = run.output;
 
     // Render Trace Timeline
     const timeline = document.getElementById('traceTimeline');
-    timeline.innerHTML = delivery.trace.map(step => `
+    timeline.innerHTML = run.trace.map(step => `
         <div class="trace-step ${step.type} ${step.status}">
             <div class="step-marker"></div>
             <div class="step-card">
@@ -169,7 +179,7 @@ document.addEventListener('keydown', (e) => {
 function init() {
     renderTable();
     renderChart();
-    console.log("Anyway Prototype Loaded. Data:", state.deliveries);
+    console.log("Anyway Prototype Loaded. Data:", state.runs);
 }
 
 init();

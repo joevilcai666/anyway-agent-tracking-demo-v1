@@ -34,23 +34,19 @@
             <ul class="nav-menu">
                 <li class="nav-item active">
                     <span class="nav-icon">📊</span>
-                    Dashboard
+                    Monitor
                 </li>
                 <li class="nav-item">
                     <span class="nav-icon">📦</span>
-                    Products catalog
+                    Products
                 </li>
                 <li class="nav-item">
-                    <span class="nav-icon">⚡</span>
-                    Payments
+                    <span class="nav-icon">📄</span>
+                    Orders
                 </li>
                 <li class="nav-item">
                     <span class="nav-icon">💰</span>
                     Finance
-                </li>
-                <li class="nav-item">
-                    <span class="nav-icon">🚀</span>
-                    API keys
                 </li>
             </ul>
 
@@ -62,13 +58,17 @@
                     <div class="user-name">demo</div>
                     <div class="user-email">demo@anyway.sh</div>
                 </div>
+                <div class="settings-icon" title="Settings (API Keys inside)">⚙️</div>
             </div>
         </nav>
 
         <!-- Main Content -->
         <main class="main-content">
             <header class="top-bar">
-                <h1>Dashboard</h1>
+                <div>
+                    <h1>Monitor</h1>
+                    <p class="subtitle">Real-time tracking of Agent Runs & Resource Costs</p>
+                </div>
                 <div class="controls">
                     <div class="date-picker">
                         <span>📅 Today: Dec 25</span>
@@ -79,7 +79,7 @@
             <!-- KPI Cards -->
             <section class="kpi-grid">
                 <div class="kpi-card">
-                    <div class="kpi-label">Total Deliveries</div>
+                    <div class="kpi-label">Total Runs</div>
                     <div class="kpi-value">1,248</div>
                     <div class="kpi-trend positive">↗ 12% vs yesterday</div>
                 </div>
@@ -103,7 +103,7 @@
             <!-- Main Chart Area (Simplified Visualization) -->
             <section class="chart-section">
                 <div class="section-header">
-                    <h2>Agent Cost vs. Revenue</h2>
+                    <h2>Cost & Usage Analysis</h2>
                     <div class="tabs">
                         <button class="tab active">Daily</button>
                         <button class="tab">Weekly</button>
@@ -118,9 +118,9 @@
             <!-- Recent Deliveries Table -->
             <section class="table-section">
                 <div class="section-header">
-                    <h2>Recent Deliveries</h2>
+                    <h2>Recent Runs</h2>
                     <div class="table-filters">
-                        <input type="text" placeholder="Search Delivery ID..." class="search-input">
+                        <input type="text" placeholder="Search Run ID..." class="search-input">
                         <select class="filter-select">
                             <option>All Statuses</option>
                             <option>Success</option>
@@ -132,9 +132,9 @@
                     <table class="data-table">
                         <thead>
                             <tr>
-                                <th>Delivery ID</th>
+                                <th>Run ID</th>
                                 <th>Timestamp</th>
-                                <th>Customer</th>
+                                <th>Deliverable / Customer</th>
                                 <th>Status</th>
                                 <th>Steps</th>
                                 <th>Tokens</th>
@@ -142,7 +142,7 @@
                                 <th>Action</th>
                             </tr>
                         </thead>
-                        <tbody id="deliveriesTableBody">
+                        <tbody id="runsTableBody">
                             <!-- Rows injected by JS -->
                         </tbody>
                     </table>
