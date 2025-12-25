@@ -72,9 +72,22 @@ function generateRuns(count = 15) {
     return runs;
 }
 
+function generateApiKeys() {
+    return [
+        { id: 1, name: "testesttest", key: "ak_*************3Wg", secret: "************************************************", created: "2025-12-23" },
+        { id: 2, name: "testtest", key: "ak_*************Zl0s", secret: "************************************************", created: "2025-12-19" },
+        { id: 3, name: "staging", key: "ak_*************ED_4", secret: "************************************************", created: "2025-10-23" },
+        { id: 4, name: "uat-key", key: "ak_*************E3Dg", secret: "************************************************", created: "2025-10-22" },
+        { id: 5, name: "mor-test", key: "ak_*************nEzM", secret: "************************************************", created: "2025-10-13" },
+        { id: 6, name: "dev-key", key: "ak_*************0iNs", secret: "************************************************", created: "2025-09-09" }
+    ];
+}
+
 const state = {
     runs: generateRuns(),
-    selectedRun: null
+    selectedRun: null,
+    apiKeys: generateApiKeys(),
+    currentView: 'dashboard'
 };
 
 // --- DOM Elements ---
@@ -83,6 +96,15 @@ const tracePanel = document.getElementById('tracePanel');
 const backdrop = document.getElementById('tracePanelBackdrop');
 const closeBtn = document.getElementById('closePanelBtn');
 const chartContainer = document.getElementById('mainChart');
+
+// New DOM Elements
+const dashboardView = document.getElementById('dashboardView');
+const apiKeysView = document.getElementById('apiKeysView');
+const settingsIcon = document.getElementById('settingsIcon');
+const settingsDropdown = document.getElementById('settingsDropdown');
+const menuApiKeys = document.getElementById('menuApiKeys');
+const apiKeysTableBody = document.getElementById('apiKeysTableBody');
+const navDashboard = document.getElementById('nav-dashboard');
 
 // --- Rendering Logic ---
 
@@ -164,6 +186,57 @@ function closePanel() {
     backdrop.classList.remove('open');
 }
 
+function renderApiKeys() {
+    apiKeysTableBody.innerHTML = state.apiKeys.map(key => `
+        <tr>
+            <td style="font-weight: 500;">${key.name}</td>
+            <td>
+                <div class="masked-key">
+                    ${key.key}
+                    <span class="eye-icon" title="Reveal">👁️</span>
+                </div>
+            </td>
+            <td>
+                <div class="masked-key">
+                    ${key.secret}
+                    <span class="eye-icon" title="Reveal">👁️</span>
+                </div>
+            </td>
+            <td style="color: var(--text-secondary); font-size: 13px;">${key.created}</td>
+            <td><button class="delete-action" onclick="deleteApiKey(${key.id})">Delete</button></td>
+        </tr>
+    `).join('');
+}
+
+window.deleteApiKey = function(id) {
+    if(confirm('Are you sure you want to delete this API Key?')) {
+        state.apiKeys = state.apiKeys.filter(k => k.id !== id);
+        renderApiKeys();
+    }
+}
+
+function switchView(viewName) {
+    state.currentView = viewName;
+    
+    // Hide all views
+    dashboardView.style.display = 'none';
+    apiKeysView.style.display = 'none';
+    
+    // Update Nav Active State
+    document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+
+    if (viewName === 'dashboard') {
+        dashboardView.style.display = 'block';
+        if(navDashboard) navDashboard.classList.add('active');
+    } else if (viewName === 'api-keys') {
+        apiKeysView.style.display = 'block';
+        renderApiKeys();
+    }
+    
+    // Close dropdown
+    settingsDropdown.classList.remove('active');
+}
+
 // --- Event Listeners ---
 
 closeBtn.addEventListener('click', closePanel);
@@ -174,12 +247,43 @@ document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') closePanel();
 });
 
+// Settings & Navigation Listeners
+if(settingsIcon) {
+    settingsIcon.addEventListener('click', (e) => {
+        e.stopPropagation();
+        settingsDropdown.classList.toggle('active');
+    });
+}
+
+document.addEventListener('click', () => {
+    if(settingsDropdown) settingsDropdown.classList.remove('active');
+});
+
+if(settingsDropdown) {
+    settingsDropdown.addEventListener('click', (e) => {
+        e.stopPropagation();
+    });
+}
+
+if(menuApiKeys) {
+    menuApiKeys.addEventListener('click', () => {
+        switchView('api-keys');
+    });
+}
+
+if(navDashboard) {
+    navDashboard.addEventListener('click', () => {
+        switchView('dashboard');
+    });
+}
+
 // --- Initialization ---
 
 function init() {
     renderTable();
     renderChart();
-    console.log("Anyway Prototype Loaded. Data:", state.runs);
+    renderApiKeys();
+    console.log("Anyway Prototype Loaded. Data:", state);
 }
 
 init();

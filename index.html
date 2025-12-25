@@ -32,19 +32,19 @@
             </div>
             
             <ul class="nav-menu">
-                <li class="nav-item active">
+                <li class="nav-item active" id="nav-dashboard">
                     <span class="nav-icon">📊</span>
-                    Monitor
+                    Dashboard
                 </li>
-                <li class="nav-item">
+                <li class="nav-item" id="nav-products">
                     <span class="nav-icon">📦</span>
-                    Products
+                    Product Catalog
                 </li>
-                <li class="nav-item">
+                <li class="nav-item" id="nav-orders">
                     <span class="nav-icon">📄</span>
                     Orders
                 </li>
-                <li class="nav-item">
+                <li class="nav-item" id="nav-finance">
                     <span class="nav-icon">💰</span>
                     Finance
                 </li>
@@ -52,102 +52,156 @@
 
             <div class="nav-divider"></div>
             
-            <div class="user-profile">
+            <div class="user-profile" id="userProfile">
                 <div class="avatar">D</div>
                 <div class="user-info">
                     <div class="user-name">demo</div>
                     <div class="user-email">demo@anyway.sh</div>
                 </div>
-                <div class="settings-icon" title="Settings (API Keys inside)">⚙️</div>
+                <div class="settings-icon" id="settingsIcon">⚙️</div>
+                
+                <!-- Settings Dropdown -->
+                <div class="settings-dropdown" id="settingsDropdown">
+                    <div class="dropdown-header">
+                        <div class="user-name">demo</div>
+                        <div class="user-email">demo@anyway.sh</div>
+                    </div>
+                    <div class="dropdown-divider"></div>
+                    <div class="dropdown-item" id="menuApiKeys">
+                        <span class="icon">🔑</span> API Keys
+                    </div>
+                    <div class="dropdown-item">
+                        <span class="icon">👤</span> Profile
+                    </div>
+                    <div class="dropdown-divider"></div>
+                    <div class="dropdown-item">
+                        <span class="icon">🚪</span> Logout
+                    </div>
+                </div>
             </div>
         </nav>
 
         <!-- Main Content -->
         <main class="main-content">
-            <header class="top-bar">
-                <div>
-                    <h1>Monitor</h1>
-                    <p class="subtitle">Real-time tracking of Agent Runs & Resource Costs</p>
-                </div>
-                <div class="controls">
-                    <div class="date-picker">
-                        <span>📅 Today: Dec 25</span>
+            <!-- Dashboard View -->
+            <div id="dashboardView">
+                <header class="top-bar">
+                    <div>
+                        <h1>Dashboard</h1>
+                        <p class="subtitle">Real-time tracking of Agent Runs & Resource Costs</p>
                     </div>
-                </div>
-            </header>
-
-            <!-- KPI Cards -->
-            <section class="kpi-grid">
-                <div class="kpi-card">
-                    <div class="kpi-label">Total Runs</div>
-                    <div class="kpi-value">1,248</div>
-                    <div class="kpi-trend positive">↗ 12% vs yesterday</div>
-                </div>
-                <div class="kpi-card">
-                    <div class="kpi-label">Total Cost</div>
-                    <div class="kpi-value">$42.80</div>
-                    <div class="kpi-trend neutral">→ Stable</div>
-                </div>
-                <div class="kpi-card">
-                    <div class="kpi-label">Avg. Margin</div>
-                    <div class="kpi-value">68%</div>
-                    <div class="kpi-trend positive">↗ 2% vs yesterday</div>
-                </div>
-                <div class="kpi-card">
-                    <div class="kpi-label">Success Rate</div>
-                    <div class="kpi-value error-text">94.2%</div>
-                    <div class="kpi-trend negative">↘ 1.5% vs yesterday</div>
-                </div>
-            </section>
-
-            <!-- Main Chart Area (Simplified Visualization) -->
-            <section class="chart-section">
-                <div class="section-header">
-                    <h2>Cost & Usage Analysis</h2>
-                    <div class="tabs">
-                        <button class="tab active">Daily</button>
-                        <button class="tab">Weekly</button>
-                        <button class="tab">Monthly</button>
+                    <div class="controls">
+                        <div class="date-picker">
+                            <span>📅 Today: Dec 25</span>
+                        </div>
                     </div>
-                </div>
-                <div class="chart-placeholder" id="mainChart">
-                    <!-- Bars injected by JS -->
-                </div>
-            </section>
+                </header>
 
-            <!-- Recent Deliveries Table -->
-            <section class="table-section">
-                <div class="section-header">
-                    <h2>Recent Runs</h2>
-                    <div class="table-filters">
-                        <input type="text" placeholder="Search Run ID..." class="search-input">
-                        <select class="filter-select">
-                            <option>All Statuses</option>
-                            <option>Success</option>
-                            <option>Failed</option>
-                        </select>
+                <!-- KPI Cards -->
+                <section class="kpi-grid">
+                    <div class="kpi-card">
+                        <div class="kpi-label">Total Runs</div>
+                        <div class="kpi-value">1,248</div>
+                        <div class="kpi-trend positive">↗ 12% vs yesterday</div>
                     </div>
-                </div>
-                <div class="table-container">
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th>Run ID</th>
-                                <th>Timestamp</th>
-                                <th>Deliverable / Customer</th>
-                                <th>Status</th>
-                                <th>Steps</th>
-                                <th>Tokens</th>
-                                <th>Cost</th>
-                                <th>Action</th>
-                            </tr>
-                        </thead>
-                        <tbody id="runsTableBody">
-                            <!-- Rows injected by JS -->
-                        </tbody>
-                    </table>
-                </div>
-            </section>
+                    <div class="kpi-card">
+                        <div class="kpi-label">Total Cost</div>
+                        <div class="kpi-value">$42.80</div>
+                        <div class="kpi-trend neutral">→ Stable</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-label">Avg. Margin</div>
+                        <div class="kpi-value">68%</div>
+                        <div class="kpi-trend positive">↗ 2% vs yesterday</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-label">Success Rate</div>
+                        <div class="kpi-value error-text">94.2%</div>
+                        <div class="kpi-trend negative">↘ 1.5% vs yesterday</div>
+                    </div>
+                </section>
+
+                <!-- Main Chart Area (Simplified Visualization) -->
+                <section class="chart-section">
+                    <div class="section-header">
+                        <h2>Cost & Usage Analysis</h2>
+                        <div class="tabs">
+                            <button class="tab active">Daily</button>
+                            <button class="tab">Weekly</button>
+                            <button class="tab">Monthly</button>
+                        </div>
+                    </div>
+                    <div class="chart-placeholder" id="mainChart">
+                        <!-- Bars injected by JS -->
+                    </div>
+                </section>
+
+                <!-- Recent Deliveries Table -->
+                <section class="table-section">
+                    <div class="section-header">
+                        <h2>Recent Runs</h2>
+                        <div class="table-filters">
+                            <input type="text" placeholder="Search Run ID..." class="search-input">
+                            <select class="filter-select">
+                                <option>All Statuses</option>
+                                <option>Success</option>
+                                <option>Failed</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Run ID</th>
+                                    <th>Timestamp</th>
+                                    <th>Deliverable / Customer</th>
+                                    <th>Status</th>
+                                    <th>Steps</th>
+                                    <th>Tokens</th>
+                                    <th>Cost</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="runsTableBody">
+                                <!-- Rows injected by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            </div>
+
+            <!-- API Keys View -->
+            <div id="apiKeysView" style="display: none;">
+                <header class="top-bar">
+                    <div>
+                        <h1>API Keys</h1>
+                    </div>
+                </header>
+
+                <section class="table-section">
+                    <div class="section-header" style="justify-content: space-between;">
+                        <input type="text" placeholder="Search via name" class="search-input" style="width: 320px;">
+                        <button class="primary-btn">+ Add API Key</button>
+                    </div>
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Key</th>
+                                    <th>Webhook secret</th>
+                                    <th>Created</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody id="apiKeysTableBody">
+                                <!-- JS will populate this -->
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            </div>
         </main>
 
         <!-- Trace Detail Slide-over Panel -->
