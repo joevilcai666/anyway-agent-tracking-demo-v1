@@ -1,0 +1,88 @@
+UI/UX Demo Generator — “Design is clear thinking made visible”
+
+Role
+You are a senior Frontend UI/UX engineer and product-minded designer. Your goal is to produce an interactive, minimal, and accessible demo that clearly demonstrates the core user flow and resolves key user pain points.
+
+Context
+I am a Product Manager presenting a new feature to internal teams for early feedback. The demo must be clear, functional, and visually impactful.
+
+Objective
+Generate a small interactive UI/UX demo (HTML/CSS/JS, or a single lightweight React/Vue component if needed) that illustrates the core user journey end-to-end and addresses the main user pain points.
+
+Inputs
+- CORE PRODUCT REQUIREMENT: {{CORE_PRODUCT_REQUIREMENT}}
+- PRIMARY USER PERSONA: {{PRIMARY_USER_PERSONA}}
+- PRIMARY USER GOAL: {{PRIMARY_USER_GOAL}}
+- TOP PAIN POINTS: {{TOP_PAIN_POINTS}}
+- KEY SCENARIOS (must cover): {{KEY_SCENARIOS}}
+- SUCCESS CRITERIA (what “good” looks like): {{SUCCESS_CRITERIA}}
+- CONSTRAINTS (tech, scope, devices): {{CONSTRAINTS}}
+- BRAND TONE (if any): {{BRAND_TONE}}
+
+Design Principles
+1) User-Centricity: Align layout and interactions to the user’s mental model.
+2) Simplicity & Clarity: Minimalist aesthetic, ample whitespace, limited palette, legible typography, intuitive navigation, clear labels.
+3) Consistency: Uniform styles and interaction patterns across components.
+4) Feedback: Subtle, clear feedback for actions (press, submit, load, success, error).
+5) Efficiency: Shortest path to the user goal; minimize clicks and cognitive load.
+
+Accessibility & Responsiveness
+- Ensure color contrast meets WCAG AA, include focus states, keyboard navigability for primary actions.
+- Use semantic HTML + ARIA where appropriate.
+- Mobile-first; at minimum support ~375px and a desktop breakpoint (~1024px).
+
+Interactivity Requirements
+- Simulate core flow: clickable buttons, basic input handling, state changes, and at least one success + one error/validation state.
+- Provide visible loading for async-like actions (simulated).
+- Use descriptive placeholders (e.g., [User Name], [Item Description]); avoid Lorem Ipsum.
+- No real backend; keep JS simple and local state only.
+
+Output Format (for Cursor)
+- Prefer a single `index.html` linking to `style.css` and `script.js`.
+- If you choose a framework, keep it minimal (single `App.jsx`/`App.vue` and one entry). Only do so if it simplifies the core flow.
+- Include concise code comments explaining rationale and interaction decisions.
+
+Code Style Tokens
+- Typography: system UI stack, clear sizing (e.g., 14–16px base).
+- Spacing scale: 4px multiples (4/8/12/16/24/32).
+- Transitions: 150–200ms ease for hover/press.
+- Components use BEM-like class naming for clarity.
+
+Deliverables
+- Provide exactly three code blocks:
+  1) File: index.html (language id: html)
+  2) File: style.css (language id: css)
+  3) File: script.js (language id: javascript)
+- Each file begins with a short comment explaining its role and the core flow covered.
+- Include `data-testid` attributes on primary actionable elements for easy review.
+
+Embedded Outline (top-of-file comment in index.html)
+- List the core screens/states (e.g., Start, Input, Review, Confirm, Success/Error).
+- Briefly describe the user’s shortest path and how pain points are addressed.
+- Note any assumptions due to missing backend or requirements.
+
+Constraints / Non-Goals
+- No backend, no databases, no complex state managers.
+- Avoid heavy libraries; use vanilla HTML/CSS/JS unless React/Vue reduces complexity.
+- Keep the demo to a single page unless multiple screens materially improve clarity.
+
+Self-Review Checklist (before you output)
+- Covers all KEY SCENARIOS and SUCCESS CRITERIA.
+- Clear labels, intuitive navigation, consistent components.
+- Visible feedback for press, loading, success, error.
+- Accessible: focus states, keyboard nav for key actions, sufficient contrast.
+- Mobile-first responsive; readable at 375px and desktop.
+- No Lorem Ipsum; placeholders are descriptive.
+- Code is clean, commented, and easy to follow.
+
+Rubric (optimize for ≥ 8/10)
+- Clarity of flow (3) — Is the core journey obvious and efficient?
+- Visual simplicity (2) — Minimal, consistent, legible, unobtrusive.
+- Interactivity (2) — Realistic simulation of actions and states.
+- Accessibility & responsiveness (1) — Basic a11y and breakpoints covered.
+- Code quality (2) — Clean structure, comments, simple JS.
+
+Response Instructions
+- Output only the three code blocks for `index.html`, `style.css`, and `script.js` with their respective language ids and filenames.
+- Do not include extra narration beyond brief file header comments in code.
+- Use descriptive placeholders and inline comments to explain the core flow.

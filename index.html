@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<!--
+  Agent Actions Tracking Prototype for Anyway
+  
+  Core Flow:
+  1. Dashboard Overview: User sees high-level metrics of their Agent's performance (Cost, Deliveries, Success Rate).
+  2. Delivery List: User identifies a specific execution (Delivery) they want to investigate (e.g., high cost or failure).
+  3. Trace Detail (Drill-down): User clicks a delivery to see the step-by-step execution trace, resource usage, and cost breakdown.
+  
+  Addresses Pain Points:
+  - "Uncontrollable gross margin": Shows exact cost per delivery and per step.
+  - "Optimization": Highlights slow or expensive steps.
+  - "Productization": Demonstrates how a delivery is packaged as a billable unit.
+-->
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Anyway - Agent Actions Tracking</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <nav class="sidebar">
+            <div class="logo-area">
+                <svg class="logo-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 2L2 19H22L12 2Z" fill="currentColor"/>
+                </svg>
+                <span class="logo-text">Anyway</span>
+            </div>
+            
+            <ul class="nav-menu">
+                <li class="nav-item active">
+                    <span class="nav-icon">📊</span>
+                    Dashboard
+                </li>
+                <li class="nav-item">
+                    <span class="nav-icon">📦</span>
+                    Products catalog
+                </li>
+                <li class="nav-item">
+                    <span class="nav-icon">⚡</span>
+                    Payments
+                </li>
+                <li class="nav-item">
+                    <span class="nav-icon">💰</span>
+                    Finance
+                </li>
+                <li class="nav-item">
+                    <span class="nav-icon">🚀</span>
+                    API keys
+                </li>
+            </ul>
+
+            <div class="nav-divider"></div>
+            
+            <div class="user-profile">
+                <div class="avatar">D</div>
+                <div class="user-info">
+                    <div class="user-name">demo</div>
+                    <div class="user-email">demo@anyway.sh</div>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="top-bar">
+                <h1>Dashboard</h1>
+                <div class="controls">
+                    <div class="date-picker">
+                        <span>📅 Today: Dec 25</span>
+                    </div>
+                </div>
+            </header>
+
+            <!-- KPI Cards -->
+            <section class="kpi-grid">
+                <div class="kpi-card">
+                    <div class="kpi-label">Total Deliveries</div>
+                    <div class="kpi-value">1,248</div>
+                    <div class="kpi-trend positive">↗ 12% vs yesterday</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">Total Cost</div>
+                    <div class="kpi-value">$42.80</div>
+                    <div class="kpi-trend neutral">→ Stable</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">Avg. Margin</div>
+                    <div class="kpi-value">68%</div>
+                    <div class="kpi-trend positive">↗ 2% vs yesterday</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">Success Rate</div>
+                    <div class="kpi-value error-text">94.2%</div>
+                    <div class="kpi-trend negative">↘ 1.5% vs yesterday</div>
+                </div>
+            </section>
+
+            <!-- Main Chart Area (Simplified Visualization) -->
+            <section class="chart-section">
+                <div class="section-header">
+                    <h2>Agent Cost vs. Revenue</h2>
+                    <div class="tabs">
+                        <button class="tab active">Daily</button>
+                        <button class="tab">Weekly</button>
+                        <button class="tab">Monthly</button>
+                    </div>
+                </div>
+                <div class="chart-placeholder" id="mainChart">
+                    <!-- Bars injected by JS -->
+                </div>
+            </section>
+
+            <!-- Recent Deliveries Table -->
+            <section class="table-section">
+                <div class="section-header">
+                    <h2>Recent Deliveries</h2>
+                    <div class="table-filters">
+                        <input type="text" placeholder="Search Delivery ID..." class="search-input">
+                        <select class="filter-select">
+                            <option>All Statuses</option>
+                            <option>Success</option>
+                            <option>Failed</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Delivery ID</th>
+                                <th>Timestamp</th>
+                                <th>Customer</th>
+                                <th>Status</th>
+                                <th>Steps</th>
+                                <th>Tokens</th>
+                                <th>Cost</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="deliveriesTableBody">
+                            <!-- Rows injected by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+
+        <!-- Trace Detail Slide-over Panel -->
+        <div class="slide-over-backdrop" id="tracePanelBackdrop"></div>
+        <aside class="slide-over-panel" id="tracePanel">
+            <div class="panel-header">
+                <div class="panel-title-group">
+                    <h2 id="detailDeliveryId">DEL-10234</h2>
+                    <span class="status-badge success" id="detailStatus">Success</span>
+                </div>
+                <button class="close-btn" id="closePanelBtn">×</button>
+            </div>
+            
+            <div class="panel-content">
+                <div class="panel-section summary">
+                    <div class="detail-item">
+                        <label>Total Cost</label>
+                        <span class="value cost" id="detailCost">$0.042</span>
+                    </div>
+                    <div class="detail-item">
+                        <label>Duration</label>
+                        <span class="value" id="detailDuration">1.2s</span>
+                    </div>
+                    <div class="detail-item">
+                        <label>Tokens</label>
+                        <span class="value" id="detailTokens">1,420</span>
+                    </div>
+                </div>
+
+                <div class="panel-section">
+                    <h3>Execution Trace</h3>
+                    <div class="trace-timeline" id="traceTimeline">
+                        <!-- Trace steps injected by JS -->
+                    </div>
+                </div>
+                
+                <div class="panel-section">
+                    <h3>Artifacts & Output</h3>
+                    <div class="code-block" id="detailOutput">
+                        <!-- Output injected by JS -->
+                    </div>
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

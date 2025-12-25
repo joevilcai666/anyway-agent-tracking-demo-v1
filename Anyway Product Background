@@ -1,0 +1,22 @@
+### Product Positioning & Vision (PMF Statement)
+
+Anyway is a commercialization infrastructure product that provides **[AI application/developer platform/data API reselling startups and individual developers]** with a **[one-stop solution to manage API costs, billing/pricing, and payments]**
+
+### Problem Statement
+
+AI Startups and developers face significant friction in commercializing their products: their business model involves variable, usage-based costs (e.g., per-token LLM calls), but existing tools like Stripe are designed for traditional SaaS companies that have fixed subscription fees and almost no cost per customer. This mismatch creates two major issues:
+
+- **Impaired Commercialization Capability: uncontrollable gross margin & cash flow**
+    - Cost Side: Inconsistent and manual tracking of upstream AI and data provider usage (e.g., LLM tokens, API calls) leads to error-prone reconciliation. This makes it impossible to accurately calculate unit economics or analyze gross margins in real time
+    - Revenue Side: Difficulty implementing flexible billing strategies (e.g., usage-based, tiered, hybrid) leads to inaccurate billing and revenue recognition, impairing cash flow predictability
+- **Inefficient Product Iteration & Operations: high cost to integrate new API vendors**
+    - No centralized platform to compare prices and quality of different APIs, preventing intelligent routing and automatic vendor selection
+    - Each integration of a new model or data API requires re-developing metering, cost mapping, and billing logic
+
+**Root Cause:** Traditional SaaS billing tools (e.g., Stripe) are designed for businesses with near-zero marginal costs and cannot handle the variable marginal costs of AI applications. The market lacks an integrated system centered on "cost metering 成本计量" that can connect "upstream costs → midstream pricing → downstream payment"
+
+---
+
+### Anyway's Solution (The Product)
+
+Anyway aims to be a single platform that helps developers/merchants connect three things: **Costs, Billing, and Payments**
