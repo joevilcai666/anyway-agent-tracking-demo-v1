@@ -57,7 +57,7 @@ function generateRuns(count = 15) {
         const customerName = CUSTOMERS[Math.floor(Math.random() * CUSTOMERS.length)];
 
         runs.push({
-            id: `RUN-${10000 + i}`,
+            id: `DEL-${10000 + i}`,
             timestamp: new Date(Date.now() - i * 1000 * 60 * 45).toLocaleString(), // Spread over time
             deliverable: deliverableName,
             customer: customerName,
