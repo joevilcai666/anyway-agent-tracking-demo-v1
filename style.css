@@ -770,6 +770,145 @@ h2 {
     overflow-y: auto;
 }
 
+/* Product Wizard Styles */
+.two-col-layout {
+    display: flex;
+    gap: 24px;
+    height: 400px;
+}
+
+.col-left {
+    flex: 1;
+    overflow-y: auto;
+    padding-right: 12px;
+}
+
+.col-right {
+    flex: 1;
+    background: var(--bg-body);
+    border-radius: 8px;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.separator-text {
+    text-align: center;
+    color: var(--text-secondary);
+    font-size: 12px;
+    margin: 16px 0;
+    font-weight: 500;
+}
+
+.option-card {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.option-card:hover {
+    border-color: var(--text-secondary);
+    background: var(--bg-body);
+}
+
+.option-card.selected {
+    border-color: var(--primary);
+    background: var(--bg-body);
+    box-shadow: 0 0 0 1px var(--primary);
+}
+
+.option-card .icon {
+    font-size: 24px;
+}
+
+.option-card .title {
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+
+.option-card .desc {
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.check-circle {
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--border);
+    border-radius: 50%;
+    margin-left: auto;
+}
+
+.option-card.selected .check-circle {
+    border-color: var(--success);
+    background: var(--success);
+}
+
+/* AI Analysis Styles */
+.analysis-placeholder {
+    text-align: center;
+    color: var(--text-secondary);
+}
+
+.analysis-result {
+    animation: fadeIn 0.5s ease;
+}
+
+.suggestion-card {
+    background: white;
+    border: 1px solid var(--accent);
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 16px;
+    text-align: center;
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.1);
+}
+
+.suggestion-card.secondary {
+    border-color: var(--border);
+    background: var(--bg-body);
+    box-shadow: none;
+}
+
+.suggestion-label {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.suggestion-price {
+    font-size: 32px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 8px;
+}
+
+.suggestion-reason {
+    font-size: 12px;
+    color: var(--text-secondary);
+    line-height: 1.4;
+}
+
+.final-price-area {
+    margin-top: 24px;
+    border-top: 1px solid var(--border);
+    padding-top: 24px;
+}
+
+.large-input {
+    font-size: 20px;
+    font-weight: 600;
+    padding: 12px;
+}
+
 .modal-actions {
     margin-top: 32px;
     display: flex;

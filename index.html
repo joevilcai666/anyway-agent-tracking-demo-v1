@@ -186,6 +186,45 @@
                 </div>
             </div>
 
+            <!-- Product Catalog View -->
+            <div id="productCatalogView" style="display: none;">
+                <header class="top-bar">
+                    <div>
+                        <h1>Product Catalog</h1>
+                        <p class="subtitle">Manage your AI Agents as monetizable products</p>
+                    </div>
+                    <div class="controls">
+                        <button class="primary-btn" onclick="openAddProductModal()">+ Create Product</button>
+                    </div>
+                </header>
+
+                <section class="table-section">
+                    <div class="section-header">
+                        <h2>All Products</h2>
+                        <div class="table-filters">
+                            <input type="text" placeholder="Search products..." class="search-input">
+                        </div>
+                    </div>
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Product Name</th>
+                                    <th>Linked Agent</th>
+                                    <th>Price</th>
+                                    <th>Strategy</th>
+                                    <th>Status</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="productTableBody">
+                                <!-- JS will populate this -->
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            </div>
+
             <!-- API Keys View -->
             <div id="apiKeysView" style="display: none;">
                 <header class="top-bar">
@@ -388,6 +427,154 @@ const client = new OpenAI({
                     <div class="manage-detail" id="manageDetailView">
                         <div class="empty-selection">Select an agent to edit</div>
                         <!-- Content Injected by JS -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Product Modal -->
+    <div class="modal-backdrop" id="addProductBackdrop">
+        <div class="modal-container large">
+            <div class="modal-header">
+                <h2>Create New Product</h2>
+                <button class="close-btn" onclick="closeAddProductModal()">×</button>
+            </div>
+            
+            <div class="wizard-steps">
+                <div class="step active" id="p-step1-indicator">1. Link Agent</div>
+                <div class="step" id="p-step2-indicator">2. Basic Info</div>
+                <div class="step" id="p-step3-indicator">3. Pricing Strategy</div>
+                <div class="step" id="p-step4-indicator">4. Finish</div>
+            </div>
+
+            <div class="modal-body">
+                <!-- Step 1: Link Agent -->
+                <div class="step-content active" id="p-step1">
+                    <div class="form-group">
+                        <label>Select an Agent to Productize</label>
+                        <p class="help-text">Linking an agent allows us to calculate costs automatically.</p>
+                        <select class="form-select" id="productAgentSelect">
+                            <option value="">-- Select an Agent --</option>
+                            <!-- Populated by JS -->
+                        </select>
+                    </div>
+                    <div class="separator-text">OR</div>
+                    <div class="option-card" id="standaloneOption" onclick="selectStandaloneProduct()">
+                        <div class="icon">📦</div>
+                        <div>
+                            <div class="title">Create Standalone Product</div>
+                            <div class="desc">For pure payment collection without linking to a specific agent execution.</div>
+                        </div>
+                        <div class="check-circle"></div>
+                    </div>
+                    
+                    <div class="modal-actions">
+                        <button class="secondary-btn" onclick="closeAddProductModal()">Cancel</button>
+                        <button class="primary-btn" onclick="productGoToStep(2)">Next</button>
+                    </div>
+                </div>
+
+                <!-- Step 2: Basic Info -->
+                <div class="step-content" id="p-step2">
+                    <div class="form-group">
+                        <label>Product Name</label>
+                        <input type="text" class="form-input" id="productNameInput" placeholder="e.g., SEO Pro Plan">
+                    </div>
+                    <div class="form-group">
+                        <label>Delivery Description</label>
+                        <textarea class="form-input" id="productDescInput" rows="3" placeholder="Describe what the customer gets..."></textarea>
+                    </div>
+                    <div class="modal-actions">
+                        <button class="secondary-btn" onclick="productGoToStep(1)">Back</button>
+                        <button class="primary-btn" onclick="productGoToStep(3)">Next: Pricing</button>
+                    </div>
+                </div>
+
+                <!-- Step 3: Pricing Strategy (AI) -->
+                <div class="step-content" id="p-step3">
+                    <div class="two-col-layout">
+                        <!-- Left: Inputs -->
+                        <div class="col-left">
+                            <h3>Pricing Factors</h3>
+                            <div class="form-group">
+                                <label>Target Audience</label>
+                                <select class="form-select" id="pricingAudience">
+                                    <option value="b2c">Individual (B2C)</option>
+                                    <option value="b2b_small">Small Team (B2B)</option>
+                                    <option value="b2b_enterprise">Enterprise</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Core Value Proposition</label>
+                                <input type="text" class="form-input" id="pricingUseCase" placeholder="e.g., Save 5 hours of research per week">
+                            </div>
+                            <div class="form-group">
+                                <label>Competitor Price (Optional)</label>
+                                <input type="text" class="form-input" id="pricingCompetitor" placeholder="e.g., $20/month">
+                            </div>
+                            <div class="form-group" id="manualCostGroup" style="display:none;">
+                                <label>Estimated Cost per Unit ($)</label>
+                                <input type="number" class="form-input" id="pricingCost" placeholder="0.00">
+                            </div>
+                             <div class="form-group">
+                                <label>Desired Margin % (Optional)</label>
+                                <input type="number" class="form-input" id="pricingMargin" placeholder="e.g. 50">
+                            </div>
+                            <button class="secondary-btn full-width" onclick="analyzePricing()">✨ Analyze & Suggest Price</button>
+                        </div>
+
+                        <!-- Right: AI Suggestion -->
+                        <div class="col-right">
+                            <div id="pricingAnalysisPlaceholder" class="analysis-placeholder">
+                                <span style="font-size: 24px;">🤖</span>
+                                <p>Fill in the factors and click Analyze to get AI-powered pricing suggestions.</p>
+                            </div>
+                            <div id="pricingAnalysisResult" class="analysis-result" style="display: none;">
+                                <div class="suggestion-card">
+                                    <div class="suggestion-label">Recommended Range</div>
+                                    <div class="suggestion-price" id="suggestedRange">$19 - $29</div>
+                                    <div class="suggestion-reason" id="suggestionReason">Based on your costs ($0.40) and B2C market averages.</div>
+                                </div>
+                                <div class="suggestion-card secondary">
+                                    <div class="suggestion-label">Anchor Price</div>
+                                    <div class="suggestion-price" id="suggestedAnchor">$39</div>
+                                </div>
+                            </div>
+                            
+                            <div class="final-price-area">
+                                <div class="form-group">
+                                    <label>Set Final Price (USD)</label>
+                                    <input type="number" class="form-input large-input" id="finalPriceInput" placeholder="0.00">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="modal-actions">
+                        <button class="secondary-btn" onclick="productGoToStep(2)">Back</button>
+                        <button class="primary-btn" onclick="productGoToStep(4)">Next: Generate Link</button>
+                    </div>
+                </div>
+
+                <!-- Step 4: Finish -->
+                <div class="step-content" id="p-step4">
+                    <div class="success-message">
+                        <span class="icon">🎉</span> Product Created Successfully!
+                    </div>
+                    
+                    <div class="credentials-box">
+                        <div class="form-group">
+                            <label>Payment Link</label>
+                            <div class="copy-field">
+                                <input type="text" readonly value="https://pay.anyway.sh/p/seo-pro-plan" id="generatedPaymentLink">
+                                <button class="copy-btn">Copy</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="modal-actions">
+                        <button class="primary-btn" onclick="finishAddProduct()">Done</button>
                     </div>
                 </div>
             </div>

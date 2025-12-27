@@ -88,6 +88,7 @@ const state = {
     selectedRun: null,
     apiKeys: generateApiKeys(),
     agents: [], // New Agent State
+    products: [], // New Product Catalog State
     llmKeys: [], // New LLM Provider Keys
     currentView: 'dashboard',
     wizardData: {
@@ -98,6 +99,21 @@ const state = {
         agentName: '',
         agentDesc: '',
         selectedKeys: []
+    },
+    productWizardData: {
+        step: 1,
+        agentId: null,
+        isStandalone: false,
+        name: '',
+        desc: '',
+        audience: '',
+        useCase: '',
+        competitorPrice: '',
+        manualCost: '',
+        margin: '',
+        suggestedRange: '',
+        suggestedAnchor: '',
+        finalPrice: ''
     }
 };
 
@@ -111,15 +127,19 @@ const chartContainer = document.getElementById('mainChart');
 // New DOM Elements
 const dashboardView = document.getElementById('dashboardView');
 const apiKeysView = document.getElementById('apiKeysView');
+const productCatalogView = document.getElementById('productCatalogView'); // New
 const settingsIcon = document.getElementById('settingsIcon');
 const settingsDropdown = document.getElementById('settingsDropdown');
 const menuApiKeys = document.getElementById('menuApiKeys');
 const apiKeysTableBody = document.getElementById('apiKeysTableBody');
+const productTableBody = document.getElementById('productTableBody'); // New
 const navDashboard = document.getElementById('nav-dashboard');
+const navProducts = document.getElementById('nav-products'); // New
 
 // Agent Modals
 const addAgentBackdrop = document.getElementById('addAgentBackdrop');
 const manageAgentsBackdrop = document.getElementById('manageAgentsBackdrop');
+const addProductBackdrop = document.getElementById('addProductBackdrop'); // New
 const addAgentBtn = document.getElementById('addAgentBtn');
 const manageAgentsBtn = document.getElementById('manageAgentsBtn');
 const emptyState = document.getElementById('emptyState');
@@ -491,6 +511,7 @@ function switchView(viewName) {
     // Hide all views
     dashboardView.style.display = 'none';
     apiKeysView.style.display = 'none';
+    if(productCatalogView) productCatalogView.style.display = 'none'; // New
     
     // Update Nav Active State
     document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
@@ -501,6 +522,10 @@ function switchView(viewName) {
     } else if (viewName === 'api-keys') {
         apiKeysView.style.display = 'block';
         renderApiKeys();
+    } else if (viewName === 'products') { // New
+        if(productCatalogView) productCatalogView.style.display = 'block';
+        if(navProducts) navProducts.classList.add('active');
+        renderProductCatalog();
     }
     
     // Close dropdown
@@ -545,6 +570,207 @@ if(navDashboard) {
     navDashboard.addEventListener('click', () => {
         switchView('dashboard');
     });
+}
+
+if(navProducts) {
+    navProducts.addEventListener('click', () => {
+        switchView('products');
+    });
+}
+
+// --- Product Catalog Logic ---
+
+function renderProductCatalog() {
+    if (!productTableBody) return;
+    
+    if (state.products.length === 0) {
+        productTableBody.innerHTML = `
+            <tr>
+                <td colspan="6" style="text-align:center; padding: 40px; color: var(--text-secondary);">
+                    No products created yet. Click "+ Create Product" to start monetizing.
+                </td>
+            </tr>
+        `;
+        return;
+    }
+    
+    productTableBody.innerHTML = state.products.map(p => `
+        <tr>
+            <td>
+                <div style="font-weight:500">${p.name}</div>
+                <div style="font-size:11px; color:var(--text-secondary)">${p.desc || 'No description'}</div>
+            </td>
+            <td>
+                ${p.isStandalone ? 
+                    '<span class="status-badge" style="background:var(--bg-body); color:var(--text-secondary)">Standalone</span>' : 
+                    state.agents.find(a => a.id === p.agentId)?.name || 'Unknown Agent'
+                }
+            </td>
+            <td>$${p.finalPrice}</td>
+            <td>
+                <div style="font-size:12px">${p.audience === 'b2c' ? 'B2C' : 'B2B'}</div>
+            </td>
+            <td><span class="status-badge active">Active</span></td>
+            <td><button class="view-btn">Edit</button></td>
+        </tr>
+    `).join('');
+}
+
+window.openAddProductModal = function() {
+    // Reset Wizard Data
+    state.productWizardData = {
+        step: 1,
+        agentId: null,
+        isStandalone: false,
+        name: '',
+        desc: '',
+        audience: 'b2c',
+        useCase: '',
+        competitorPrice: '',
+        manualCost: '',
+        margin: '',
+        suggestedRange: '',
+        suggestedAnchor: '',
+        finalPrice: ''
+    };
+    
+    // Reset UI Inputs
+    if(document.getElementById('productNameInput')) document.getElementById('productNameInput').value = '';
+    if(document.getElementById('productDescInput')) document.getElementById('productDescInput').value = '';
+    if(document.getElementById('pricingAudience')) document.getElementById('pricingAudience').value = 'b2c';
+    if(document.getElementById('finalPriceInput')) document.getElementById('finalPriceInput').value = '';
+    
+    // Reset Analysis UI
+    document.getElementById('pricingAnalysisPlaceholder').style.display = 'block';
+    document.getElementById('pricingAnalysisResult').style.display = 'none';
+    
+    // Populate Agent Select
+    const agentSelect = document.getElementById('productAgentSelect');
+    if (agentSelect) {
+        agentSelect.innerHTML = state.agents.map(a => `<option value="${a.id}">${a.name}</option>`).join('');
+        if (state.agents.length === 0) {
+            agentSelect.innerHTML = '<option value="" disabled selected>No agents available</option>';
+        }
+    }
+    
+    // Reset Selection UI
+    selectStandaloneProduct(false);
+    
+    window.productGoToStep(1);
+    addProductBackdrop.classList.add('active');
+}
+
+window.closeAddProductModal = function() {
+    addProductBackdrop.classList.remove('active');
+}
+
+window.selectStandaloneProduct = function(isStandalone) {
+    state.productWizardData.isStandalone = isStandalone;
+    const agentCard = document.getElementById('agentOptionCard');
+    const standaloneCard = document.getElementById('standaloneOptionCard');
+    const agentSelect = document.getElementById('productAgentSelect');
+    
+    if (isStandalone) {
+        standaloneCard.classList.add('selected');
+        agentCard.classList.remove('selected');
+        agentSelect.disabled = true;
+    } else {
+        agentCard.classList.add('selected');
+        standaloneCard.classList.remove('selected');
+        agentSelect.disabled = false;
+    }
+}
+
+window.productGoToStep = function(step) {
+    // Validation
+    if (step === 2 && state.productWizardData.step === 1) {
+        if (!state.productWizardData.isStandalone && (!state.agents.length || !document.getElementById('productAgentSelect').value)) {
+            // Allow if standalone, else check agent
+             if(!state.productWizardData.isStandalone) {
+                 const agentId = document.getElementById('productAgentSelect').value;
+                 if(!agentId) {
+                     alert("Please select an agent or choose Standalone Product.");
+                     return;
+                 }
+                 state.productWizardData.agentId = parseInt(agentId);
+             }
+        }
+    }
+    
+    if (step === 3 && state.productWizardData.step === 2) {
+        const name = document.getElementById('productNameInput').value;
+        if (!name) {
+            alert("Product Name is required.");
+            return;
+        }
+        state.productWizardData.name = name;
+        state.productWizardData.desc = document.getElementById('productDescInput').value;
+    }
+    
+    if (step === 4 && state.productWizardData.step === 3) {
+        const price = document.getElementById('finalPriceInput').value;
+        if (!price) {
+            alert("Please set a final price.");
+            return;
+        }
+        state.productWizardData.finalPrice = price;
+    }
+
+    // Update UI
+    document.querySelectorAll('#addProductBackdrop .step').forEach((el, idx) => {
+        if (idx + 1 === step) el.classList.add('active');
+        else el.classList.remove('active');
+    });
+    
+    document.querySelectorAll('#addProductBackdrop .step-content').forEach((el, idx) => {
+        if (idx + 1 === step) el.classList.add('active');
+        else el.classList.remove('active');
+    });
+    
+    state.productWizardData.step = step;
+}
+
+window.analyzePricing = function() {
+    const audience = document.getElementById('pricingAudience').value;
+    state.productWizardData.audience = audience;
+    
+    // Simulate AI Analysis
+    const btn = event.target;
+    const originalText = btn.innerHTML;
+    btn.innerHTML = "🤖 Analyzing Market Data...";
+    btn.disabled = true;
+    
+    setTimeout(() => {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+        
+        // Mock Result Logic
+        let min = 19, max = 29;
+        if (audience === 'b2b_small') { min = 49; max = 99; }
+        if (audience === 'b2b_enterprise') { min = 499; max = 999; }
+        
+        document.getElementById('pricingAnalysisPlaceholder').style.display = 'none';
+        document.getElementById('pricingAnalysisResult').style.display = 'block';
+        document.getElementById('suggestedRange').textContent = `$${min} - $${max}`;
+        
+        // Auto-fill a suggested price
+        document.getElementById('finalPriceInput').value = max - 0.01; // .99 trick
+        
+    }, 1500);
+}
+
+window.finishAddProduct = function() {
+    const newProduct = {
+        id: Date.now(),
+        ...state.productWizardData,
+        created: new Date().toISOString()
+    };
+    
+    state.products.push(newProduct);
+    renderProductCatalog();
+    closeAddProductModal();
+    // Switch to products view if not already there
+    switchView('products'); 
 }
 
 // --- Initialization ---
