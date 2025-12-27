@@ -716,3 +716,366 @@ h2 {
     background: none; /* Override default button bg if used */
     border: none;
 }
+
+/* Modal & Dialog Styles */
+.modal-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: none; /* Hidden by default */
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+}
+
+.modal-backdrop.active {
+    display: flex;
+}
+
+.modal-container {
+    background: white;
+    width: 500px;
+    max-width: 90%;
+    border-radius: 12px;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.modal-container.large {
+    width: 900px;
+    height: 600px;
+}
+
+.modal-header {
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-header h2 {
+    font-size: 18px;
+    margin: 0;
+}
+
+.modal-body {
+    padding: 24px;
+    flex: 1;
+    overflow-y: auto;
+}
+
+.modal-actions {
+    margin-top: 32px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+}
+
+/* Secondary Button */
+.secondary-btn {
+    background-color: white;
+    color: var(--text-primary);
+    border: 1px solid var(--border);
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-weight: 500;
+    cursor: pointer;
+    font-size: 13px;
+}
+
+.secondary-btn:hover {
+    background-color: var(--bg-body);
+    border-color: var(--text-secondary);
+}
+
+.primary-btn.large {
+    font-size: 16px;
+    padding: 12px 24px;
+}
+
+/* Wizard Stepper */
+.wizard-steps {
+    display: flex;
+    background: var(--bg-body);
+    border-bottom: 1px solid var(--border);
+}
+
+.step {
+    flex: 1;
+    text-align: center;
+    padding: 12px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-tertiary);
+    border-bottom: 2px solid transparent;
+}
+
+.step.active {
+    color: var(--text-primary);
+    border-bottom-color: var(--primary);
+    font-weight: 600;
+}
+
+.step-content {
+    display: none;
+}
+
+.step-content.active {
+    display: block;
+    animation: fadeIn 0.2s ease-out;
+}
+
+/* Form Elements */
+.form-group {
+    margin-bottom: 16px;
+}
+
+.form-group label {
+    display: block;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    margin-bottom: 6px;
+}
+
+.form-input, .form-select {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 14px;
+    font-family: inherit;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.form-input:focus, .form-select:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.1);
+}
+
+/* Key Selection List */
+.key-selection-list {
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    max-height: 150px;
+    overflow-y: auto;
+}
+
+.key-option {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+}
+
+.key-option:last-child {
+    border-bottom: none;
+}
+
+.key-option:hover {
+    background-color: var(--bg-body);
+}
+
+.key-option.selected {
+    background-color: var(--accent-light);
+}
+
+/* Credentials Box */
+.credentials-box {
+    background: var(--bg-body);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 24px;
+}
+
+.copy-field {
+    display: flex;
+    gap: 8px;
+}
+
+.copy-field input {
+    flex: 1;
+    background: white;
+    border: 1px solid var(--border);
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-family: 'SF Mono', monospace;
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.copy-btn {
+    padding: 8px 12px;
+    border: 1px solid var(--border);
+    background: white;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+}
+
+.copy-btn:hover {
+    background: var(--bg-body);
+}
+
+.help-text {
+    font-size: 12px;
+    color: var(--warning);
+    margin-top: 4px;
+}
+
+.success-message {
+    background: var(--success-bg);
+    color: var(--success);
+    padding: 12px;
+    border-radius: 6px;
+    margin-bottom: 24px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 500;
+}
+
+/* Empty State */
+.empty-state {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 60vh;
+    text-align: center;
+}
+
+.empty-content {
+    max-width: 400px;
+}
+
+.empty-icon {
+    font-size: 64px;
+    margin-bottom: 24px;
+}
+
+.empty-content h2 {
+    font-size: 24px;
+    margin-bottom: 12px;
+}
+
+.empty-content p {
+    color: var(--text-secondary);
+    margin-bottom: 32px;
+    line-height: 1.6;
+}
+
+/* Manage Agents Layout */
+.manage-layout {
+    display: flex;
+    height: 100%;
+}
+
+.manage-sidebar {
+    width: 250px;
+    border-right: 1px solid var(--border);
+    background: var(--bg-body);
+    display: flex;
+    flex-direction: column;
+}
+
+.list-header {
+    padding: 16px;
+    font-weight: 600;
+    border-bottom: 1px solid var(--border);
+}
+
+.agent-list {
+    flex: 1;
+    overflow-y: auto;
+}
+
+.agent-list-item {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+}
+
+.agent-list-item:hover {
+    background: white;
+}
+
+.agent-list-item.active {
+    background: white;
+    border-left: 3px solid var(--primary);
+}
+
+.agent-list-item .name {
+    font-weight: 500;
+    font-size: 14px;
+    margin-bottom: 4px;
+}
+
+.agent-list-item .meta {
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.manage-detail {
+    flex: 1;
+    padding: 24px;
+    overflow-y: auto;
+}
+
+.empty-selection {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: var(--text-tertiary);
+}
+
+.detail-section {
+    margin-bottom: 32px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid var(--border);
+}
+
+.detail-section:last-child {
+    border-bottom: none;
+}
+
+.detail-section h3 {
+    font-size: 16px;
+    margin-bottom: 16px;
+    color: var(--text-primary);
+}
+
+.danger-zone {
+    border: 1px solid var(--error-bg);
+    background: #FEF2F2;
+    border-radius: 8px;
+    padding: 16px;
+}
+
+.danger-zone h3 {
+    color: var(--error);
+}
+
+.danger-btn {
+    background: var(--error);
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 500;
+}
+
+.danger-btn:hover {
+    background: #DC2626;
+}

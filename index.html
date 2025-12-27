@@ -91,13 +91,27 @@
                         <p class="subtitle">Real-time tracking of Agent Runs & Resource Costs</p>
                     </div>
                     <div class="controls">
-                        <div class="date-picker">
+                        <button class="secondary-btn" id="manageAgentsBtn" style="margin-right: 8px;">Settings</button>
+                        <button class="primary-btn" id="addAgentBtn">+ Add Agent</button>
+                        <div class="date-picker" style="margin-left: 16px;">
                             <span>📅 Today: Dec 25</span>
                         </div>
                     </div>
                 </header>
 
-                <!-- KPI Cards -->
+                <!-- Empty State (Hidden by default) -->
+                <div id="emptyState" class="empty-state" style="display: none;">
+                    <div class="empty-content">
+                        <div class="empty-icon">🤖</div>
+                        <h2>No Agents Configured</h2>
+                        <p>Get started by adding your first Agent to track its performance and costs.</p>
+                        <button class="primary-btn large" onclick="openAddAgentModal()">+ Configure First Agent</button>
+                    </div>
+                </div>
+
+                <!-- Dashboard Content Container -->
+                <div id="dashboardContent">
+                    <!-- KPI Cards -->
                 <section class="kpi-grid">
                     <div class="kpi-card">
                         <div class="kpi-label">Total Deliveries</div>
@@ -169,6 +183,7 @@
                         </table>
                     </div>
                 </section>
+                </div>
             </div>
 
             <!-- API Keys View -->
@@ -246,6 +261,137 @@
                 </div>
             </div>
         </aside>
+    </div>
+
+    <!-- Add Agent Modal -->
+    <div class="modal-backdrop" id="addAgentBackdrop">
+        <div class="modal-container">
+            <div class="modal-header">
+                <h2>Configure New Agent</h2>
+                <button class="close-btn" onclick="closeAddAgentModal()">×</button>
+            </div>
+            
+            <div class="wizard-steps">
+                <div class="step active" id="step1-indicator">1. Add Provider Key</div>
+                <div class="step" id="step2-indicator">2. Agent Info</div>
+                <div class="step" id="step3-indicator">3. Get Credentials</div>
+            </div>
+
+            <div class="modal-body">
+                <!-- Step 1: Add LLM Provider Key -->
+                <div class="step-content active" id="step1">
+                    <div class="form-group">
+                        <label>LLM Provider</label>
+                        <select class="form-select" id="providerSelect">
+                            <option value="openai">OpenAI</option>
+                            <option value="anthropic">Anthropic</option>
+                            <option value="gemini">Gemini</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Key Label</label>
+                        <input type="text" class="form-input" id="keyLabelInput" placeholder="e.g., My Production Key">
+                    </div>
+                    <div class="form-group">
+                        <label>API Key</label>
+                        <input type="password" class="form-input" id="apiKeyInput" placeholder="sk-...">
+                    </div>
+                    <div class="modal-actions">
+                        <button class="secondary-btn" onclick="closeAddAgentModal()">Cancel</button>
+                        <button class="primary-btn" onclick="goToStep(2)">Next: Agent Info</button>
+                    </div>
+                </div>
+
+                <!-- Step 2: Agent Info -->
+                <div class="step-content" id="step2">
+                    <div class="form-group">
+                        <label>Agent Name</label>
+                        <input type="text" class="form-input" id="agentNameInput" placeholder="e.g., Customer Support Bot">
+                    </div>
+                    <div class="form-group">
+                        <label>Description (Optional)</label>
+                        <textarea class="form-input" id="agentDescInput" rows="2" placeholder="Brief description..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Associate Provider Keys</label>
+                        <div class="key-selection-list" id="keySelectionList">
+                            <!-- Injected by JS -->
+                        </div>
+                    </div>
+                    <div class="modal-actions">
+                        <button class="secondary-btn" onclick="goToStep(1)">Back</button>
+                        <button class="primary-btn" onclick="goToStep(3)">Next: Generate Credentials</button>
+                    </div>
+                </div>
+
+                <!-- Step 3: Credentials -->
+                <div class="step-content" id="step3">
+                    <div class="success-message">
+                        <span class="icon">✅</span> Agent Configured Successfully!
+                    </div>
+                    
+                    <div class="credentials-box">
+                        <div class="form-group">
+                            <label>Anyway API Key</label>
+                            <div class="copy-field">
+                                <input type="text" readonly value="any_wk_89234789234..." id="generatedAnywayKey">
+                                <button class="copy-btn">Copy</button>
+                            </div>
+                            <p class="help-text">Please save this key securely. It will not be shown again.</p>
+                        </div>
+                        <div class="form-group">
+                            <label>Anyway Base URL</label>
+                            <div class="copy-field">
+                                <input type="text" readonly value="https://api.anyway.sh/v1/openai" id="generatedBaseUrl">
+                                <button class="copy-btn">Copy</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="code-integration">
+                        <h4>Integration Example</h4>
+                        <div class="code-block" style="background: #f4f4f5; color: #333; border: 1px solid #e4e4e7;">
+const client = new OpenAI({
+  apiKey: "<span style="color:#059669">ANYWAY_API_KEY</span>",
+  baseURL: "<span style="color:#059669">https://api.anyway.sh/v1/openai</span>"
+});
+                        </div>
+                    </div>
+
+                    <div class="modal-actions">
+                        <button class="secondary-btn" onclick="testConnection()">Test Connection</button>
+                        <button class="primary-btn" onclick="finishAddAgent()">Done</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Manage Agents Modal -->
+    <div class="modal-backdrop" id="manageAgentsBackdrop">
+        <div class="modal-container large">
+            <div class="modal-header">
+                <h2>Manage Agents</h2>
+                <button class="close-btn" onclick="closeManageAgentsModal()">×</button>
+            </div>
+            <div class="modal-body" style="padding: 0;">
+                <div class="manage-layout">
+                    <!-- Sidebar List -->
+                    <div class="manage-sidebar">
+                        <div class="list-header">All Agents</div>
+                        <div class="agent-list" id="agentList">
+                            <!-- Injected by JS -->
+                        </div>
+                    </div>
+                    
+                    <!-- Detail View -->
+                    <div class="manage-detail" id="manageDetailView">
+                        <div class="empty-selection">Select an agent to edit</div>
+                        <!-- Content Injected by JS -->
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script src="script.js"></script>
