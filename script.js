@@ -647,9 +647,11 @@ window.openAddProductModal = function() {
     // Populate Agent Select
     const agentSelect = document.getElementById('productAgentSelect');
     if (agentSelect) {
-        agentSelect.innerHTML = state.agents.map(a => `<option value="${a.id}">${a.name}</option>`).join('');
         if (state.agents.length === 0) {
             agentSelect.innerHTML = '<option value="" disabled selected>No agents available</option>';
+        } else {
+            agentSelect.innerHTML = '<option value="">-- Select an Agent --</option>' + 
+                state.agents.map(a => `<option value="${a.id}">${a.name}</option>`).join('');
         }
     }
     
@@ -665,19 +667,25 @@ window.closeAddProductModal = function() {
 }
 
 window.selectStandaloneProduct = function(isStandalone) {
+    // Toggle if called without args (from UI click)
+    if (typeof isStandalone === 'undefined') {
+        isStandalone = !state.productWizardData.isStandalone;
+    }
+    
     state.productWizardData.isStandalone = isStandalone;
-    const agentCard = document.getElementById('agentOptionCard');
-    const standaloneCard = document.getElementById('standaloneOptionCard');
+    // Corrected ID to match HTML (standaloneOption) and removed non-existent agentOptionCard
+    const standaloneCard = document.getElementById('standaloneOption');
     const agentSelect = document.getElementById('productAgentSelect');
     
     if (isStandalone) {
-        standaloneCard.classList.add('selected');
-        agentCard.classList.remove('selected');
-        agentSelect.disabled = true;
+        if(standaloneCard) standaloneCard.classList.add('selected');
+        if(agentSelect) {
+            agentSelect.disabled = true;
+            agentSelect.value = "";
+        }
     } else {
-        agentCard.classList.add('selected');
-        standaloneCard.classList.remove('selected');
-        agentSelect.disabled = false;
+        if(standaloneCard) standaloneCard.classList.remove('selected');
+        if(agentSelect) agentSelect.disabled = false;
     }
 }
 
