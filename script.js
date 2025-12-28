@@ -40,11 +40,14 @@ function generateRuns(count = 15) {
             trace.push({
                 id: `step_${i}_${j}`,
                 name: stepTemplate.name,
+                description: `Executed ${stepTemplate.name} successfully`, // Added description
                 type: stepTemplate.type,
                 status: (j === stepCount - 1 && !isSuccess) ? "failed" : "success",
                 duration: duration.toFixed(2),
                 cost: cost.toFixed(4),
                 tokens: tokens,
+                input: "User query: 'Analyze market trends for Q3'", // Added input
+                output: "Market data: Growth 5%, Competitors: A, B, C", // Added output
                 details: stepTemplate.type === 'llm' ? `Model: gpt-4-turbo\nInput: ${tokens} tokens` : "System operation"
             });
 
@@ -175,21 +178,19 @@ window.openAddAgentModal = function() {
     // Reset Wizard Data
     state.wizardData = {
         step: 1,
-        provider: 'openai',
-        keyLabel: '',
-        apiKey: '',
         agentName: '',
         agentDesc: '',
-        selectedKeys: []
+        keys: []
     };
     
     // Reset UI
+    document.getElementById('agentNameInput').value = '';
+    document.getElementById('agentDescInput').value = '';
     document.getElementById('providerSelect').value = 'openai';
     document.getElementById('keyLabelInput').value = '';
     document.getElementById('apiKeyInput').value = '';
-    document.getElementById('agentNameInput').value = '';
-    document.getElementById('agentDescInput').value = '';
     
+    renderConfiguredKeys();
     window.goToStep(1);
     addAgentBackdrop.classList.add('active');
 }
@@ -199,54 +200,44 @@ window.closeAddAgentModal = function() {
 }
 
 window.goToStep = function(step) {
-    // Validation before moving forward
+    // Validation Step 1 -> 2
     if (step === 2 && state.wizardData.step === 1) {
-        const label = document.getElementById('keyLabelInput').value;
-        const key = document.getElementById('apiKeyInput').value;
-        if (!label || !key) {
-            alert("Please fill in all fields.");
-            return;
-        }
-        // Save Step 1 data temporarily
-        state.wizardData.keyLabel = label;
-        state.wizardData.apiKey = key;
-        state.wizardData.provider = document.getElementById('providerSelect').value;
-        
-        // Add this key to global LLM keys if not exists (Simulated)
-        const newKey = {
-            id: Date.now(),
-            provider: state.wizardData.provider,
-            label: label,
-            key: key.substring(0, 8) + "...",
-            fullKey: key,
-            created: new Date().toLocaleDateString()
-        };
-        state.llmKeys.push(newKey);
-        
-        // Render Selection List for Step 2
-        renderKeySelectionList();
-    }
-    
-    if (step === 3 && state.wizardData.step === 2) {
         const name = document.getElementById('agentNameInput').value;
         if (!name) {
             alert("Agent Name is required.");
             return;
         }
-        
-        // Collect selected keys
-        const selectedEls = document.querySelectorAll('.key-option.selected');
-        if (selectedEls.length === 0) {
-            alert("Please select at least one Provider Key.");
+        state.wizardData.agentName = name;
+        state.wizardData.agentDesc = document.getElementById('agentDescInput').value;
+    }
+    
+    // Validation Step 2 -> 3
+    if (step === 3 && state.wizardData.step === 2) {
+        if (state.wizardData.keys.length === 0) {
+            alert("Please add at least one Provider Key.");
             return;
         }
         
-        state.wizardData.agentName = name;
-        state.wizardData.agentDesc = document.getElementById('agentDescInput').value;
-        
-        // Generate Mock Credentials
+        // Generate Credentials
         document.getElementById('generatedAnywayKey').value = "any_wk_" + Math.random().toString(36).substr(2, 16);
-        document.getElementById('generatedBaseUrl').value = `https://api.anyway.sh/v1/${state.wizardData.provider}`; // Simplified logic
+        
+        // Generate Base URLs for each provider
+        const baseUrlContainer = document.getElementById('generatedBaseUrlsContainer');
+        baseUrlContainer.innerHTML = state.wizardData.keys.map(k => `
+            <div class="copy-field" style="margin-bottom: 8px;">
+                <span style="font-size: 11px; width: 60px; display: inline-block; color: var(--text-secondary);">${k.provider}</span>
+                <input type="text" readonly value="https://api.anyway.sh/v1/${k.provider}">
+                <button class="copy-btn">Copy</button>
+            </div>
+        `).join('');
+
+        // Generate Code Example
+        const codeBlock = document.getElementById('integrationCodeBlock');
+        codeBlock.innerHTML = `
+const client = new OpenAI({
+  apiKey: "<span style="color:#059669">ANYWAY_API_KEY</span>",
+  baseURL: "<span style="color:#059669">https://api.anyway.sh/v1/${state.wizardData.keys[0].provider}</span>" // Use corresponding URL
+});`;
     }
 
     // Update UI
@@ -263,23 +254,77 @@ window.goToStep = function(step) {
     state.wizardData.step = step;
 }
 
-function renderKeySelectionList() {
-    const list = document.getElementById('keySelectionList');
-    list.innerHTML = state.llmKeys.map(k => `
-        <div class="key-option" onclick="toggleKeySelection(this, ${k.id})">
+window.addProviderKey = function() {
+    const provider = document.getElementById('providerSelect').value;
+    const label = document.getElementById('keyLabelInput').value;
+    const key = document.getElementById('apiKeyInput').value;
+    
+    if (!label || !key) {
+        alert("Please fill in Label and API Key.");
+        return;
+    }
+    
+    // Unique Label Check
+    if (state.wizardData.keys.some(k => k.label === label)) {
+        alert("Key Label must be unique.");
+        return;
+    }
+    
+    // Max 3 Check
+    if (state.wizardData.keys.length >= 3) {
+        alert("Maximum 3 keys allowed.");
+        return;
+    }
+    
+    state.wizardData.keys.push({
+        id: Date.now(),
+        provider,
+        label,
+        key: key.substring(0, 8) + "...",
+        fullKey: key,
+        showFull: false // Track visibility state
+    });
+    
+    // Clear Inputs
+    document.getElementById('keyLabelInput').value = '';
+    document.getElementById('apiKeyInput').value = '';
+    
+    renderConfiguredKeys();
+}
+
+window.removeProviderKey = function(id) {
+    state.wizardData.keys = state.wizardData.keys.filter(k => k.id !== id);
+    renderConfiguredKeys();
+}
+
+function renderConfiguredKeys() {
+    const list = document.getElementById('configuredKeysList');
+    if (state.wizardData.keys.length === 0) {
+        list.innerHTML = '<div class="empty-keys-msg">No keys added yet.</div>';
+        return;
+    }
+    
+    list.innerHTML = state.wizardData.keys.map(k => `
+        <div class="key-option" style="cursor: default;">
             <span>${k.provider === 'openai' ? '🟢' : k.provider === 'anthropic' ? '🟠' : '🔵'}</span>
             <div style="flex:1">
                 <div style="font-weight:500; font-size:13px">${k.label}</div>
-                <div style="font-size:11px; color:var(--text-secondary)">${k.provider} • ${k.key}</div>
+                <div style="font-size:11px; color:var(--text-secondary)">
+                    ${k.provider} • <span style="font-family:monospace">${k.showFull ? k.fullKey : k.key}</span>
+                    <a href="#" onclick="toggleWizardKeyVisibility(${k.id}); return false;" style="margin-left:4px; font-size:10px;">${k.showFull ? 'Hide' : 'Show'}</a>
+                </div>
             </div>
-            <div class="check-circle"></div>
+            <button class="secondary-btn" style="padding: 2px 8px; height: 24px; font-size: 11px;" onclick="removeProviderKey(${k.id})">Remove</button>
         </div>
     `).join('');
 }
 
-window.toggleKeySelection = function(el, id) {
-    el.classList.toggle('selected');
-    // In a real app, update state.wizardData.selectedKeys
+window.toggleWizardKeyVisibility = function(id) {
+    const key = state.wizardData.keys.find(k => k.id === id);
+    if (key) {
+        key.showFull = !key.showFull;
+        renderConfiguredKeys();
+    }
 }
 
 window.testConnection = function() {
@@ -299,7 +344,9 @@ window.finishAddAgent = function() {
         id: Date.now(),
         name: state.wizardData.agentName,
         description: state.wizardData.agentDesc,
-        providerCount: document.querySelectorAll('.key-option.selected').length
+        providerCount: state.wizardData.keys.length,
+        keys: state.wizardData.keys,
+        anywayKey: document.getElementById('generatedAnywayKey').value
     };
     state.agents.push(newAgent);
     
@@ -336,34 +383,51 @@ window.selectAgent = function(id) {
     if (!agent) return;
     
     const detailView = document.getElementById('manageDetailView');
+    
+    // Generate Keys HTML
+    const keysHtml = (agent.keys || []).map(k => `
+        <div class="key-option" style="cursor: default; margin-bottom: 8px;">
+            <span>${k.provider === 'openai' ? '🟢' : k.provider === 'anthropic' ? '🟠' : '🔵'}</span>
+            <div style="flex:1">
+                <div style="font-weight:500; font-size:13px">${k.label}</div>
+                <div style="font-size:11px; color:var(--text-secondary)">
+                    ${k.provider} • <span style="font-family:monospace">${k.showFull ? k.fullKey : k.key}</span>
+                    <a href="#" onclick="toggleAgentKeyVisibility(${agent.id}, ${k.id}); return false;" style="margin-left:4px; font-size:10px;">${k.showFull ? 'Hide' : 'Show'}</a>
+                </div>
+            </div>
+            <button class="secondary-btn" style="padding:2px 8px; font-size:11px;" onclick="removeAgentKey(${agent.id}, ${k.id})">Remove</button>
+        </div>
+    `).join('');
+
+    // Generate Base URLs HTML
+    const baseUrlsHtml = (agent.keys || []).map(k => `
+        <div class="copy-field" style="margin-bottom: 8px;">
+            <span style="font-size: 11px; width: 60px; display: inline-block; color: var(--text-secondary);">${k.provider}</span>
+            <input type="text" readonly value="https://api.anyway.sh/v1/${k.provider}">
+            <button class="copy-btn">Copy</button>
+        </div>
+    `).join('');
+
     detailView.innerHTML = `
         <div class="detail-section">
             <h3>Basic Information</h3>
             <div class="form-group">
                 <label>Agent Name</label>
-                <input type="text" class="form-input" value="${agent.name}">
+                <input type="text" class="form-input" id="editAgentName" value="${agent.name}">
             </div>
             <div class="form-group">
                 <label>Description</label>
-                <textarea class="form-input" rows="2">${agent.description || ''}</textarea>
+                <textarea class="form-input" id="editAgentDesc" rows="2">${agent.description || ''}</textarea>
             </div>
-            <button class="primary-btn">Save Changes</button>
+            <button class="primary-btn" onclick="saveAgentInfo(${agent.id})">Save Changes</button>
         </div>
         
         <div class="detail-section">
             <h3>Provider Keys</h3>
             <div class="key-selection-list" style="margin-bottom:12px;">
-                 <!-- Mock showing linked keys -->
-                 <div class="key-option">
-                    <span>🟢</span>
-                    <div style="flex:1">
-                        <div style="font-weight:500; font-size:13px">Production Key</div>
-                        <div style="font-size:11px; color:var(--text-secondary)">OpenAI • sk-....78s</div>
-                    </div>
-                    <button class="secondary-btn" style="padding:4px 8px; font-size:11px;">Remove</button>
-                 </div>
+                 ${keysHtml || '<div class="empty-keys-msg">No keys linked.</div>'}
             </div>
-            <button class="secondary-btn">+ Link New Key</button>
+            <button class="secondary-btn" onclick="promptAddKey(${agent.id})">+ Link New Key</button>
         </div>
         
         <div class="detail-section">
@@ -371,11 +435,14 @@ window.selectAgent = function(id) {
             <div class="form-group">
                 <label>Anyway API Key</label>
                 <div class="copy-field">
-                    <input type="text" readonly value="any_wk_*************">
-                    <button class="copy-btn">Show</button>
+                    <input type="text" readonly value="${agent.anywayKey || 'Not Generated'}" style="font-family:monospace;">
+                    <button class="copy-btn">Copy</button>
                 </div>
             </div>
-            <button class="secondary-btn" style="color:var(--warning); border-color:var(--warning);">Regenerate Key</button>
+             <div class="form-group">
+                <label>Anyway Base URLs</label>
+                ${baseUrlsHtml}
+            </div>
         </div>
         
         <div class="danger-zone">
@@ -384,6 +451,57 @@ window.selectAgent = function(id) {
             <button class="danger-btn" onclick="deleteAgent(${agent.id})">Delete Agent</button>
         </div>
     `;
+}
+
+window.saveAgentInfo = function(id) {
+    const agent = state.agents.find(a => a.id === id);
+    if (!agent) return;
+    
+    const newName = document.getElementById('editAgentName').value;
+    if (!newName) {
+        alert("Agent Name cannot be empty.");
+        return;
+    }
+    
+    agent.name = newName;
+    agent.description = document.getElementById('editAgentDesc').value;
+    
+    renderAgentList();
+    alert("Changes saved successfully.");
+}
+
+window.removeAgentKey = function(agentId, keyId) {
+    const agent = state.agents.find(a => a.id === agentId);
+    if (!agent) return;
+    
+    if (confirm("Remove this key? The agent will no longer be able to use this provider.")) {
+        agent.keys = agent.keys.filter(k => k.id !== keyId);
+        agent.providerCount = agent.keys.length;
+        renderAgentList();
+        selectAgent(agentId); // Refresh detail view
+    }
+}
+
+window.promptAddKey = function(agentId) {
+    const provider = prompt("Enter Provider (openai/anthropic/gemini):", "openai");
+    if(!provider) return;
+    const label = prompt("Enter Key Label:", "New Key");
+    if(!label) return;
+    const key = prompt("Enter API Key:", "sk-...");
+    if(!key) return;
+    
+    const agent = state.agents.find(a => a.id === agentId);
+    agent.keys = agent.keys || [];
+    agent.keys.push({
+        id: Date.now(),
+        provider,
+        label,
+        key: key.substring(0, 8) + "...",
+        fullKey: key
+    });
+    agent.providerCount = agent.keys.length;
+    renderAgentList();
+    selectAgent(agentId);
 }
 
 window.deleteAgent = function(id) {
@@ -405,7 +523,7 @@ function renderTable() {
             <td>${run.timestamp.split(',')[0]}</td>
             <td>
                 <div style="font-weight:500">${run.deliverable}</div>
-                <div style="font-size:11px; color:var(--text-secondary)">${run.customer}</div>
+                <div style="font-size:11px; color:var(--text-secondary)">demo@anyway.sh</div>
             </td>
             <td><span class="status-badge ${run.status}">${run.status}</span></td>
             <td>${run.trace.length} steps</td>
@@ -577,6 +695,31 @@ if(navProducts) {
         switchView('products');
     });
 }
+
+// Global Copy Button Handler
+document.addEventListener('click', (e) => {
+    if (e.target.classList.contains('copy-btn')) {
+        const input = e.target.previousElementSibling;
+        if (input && input.tagName === 'INPUT') {
+            input.select();
+            // Modern Clipboard API
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                 navigator.clipboard.writeText(input.value);
+            } else {
+                // Fallback
+                document.execCommand('copy');
+            }
+            
+            const originalText = e.target.textContent;
+            e.target.textContent = 'Copied!';
+            e.target.classList.add('success');
+            setTimeout(() => {
+                e.target.textContent = originalText;
+                e.target.classList.remove('success');
+            }, 1500);
+        }
+    }
+});
 
 // --- Product Catalog Logic ---
 

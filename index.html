@@ -169,7 +169,7 @@
                                 <tr>
                                     <th>Delivery ID</th>
                                     <th>Timestamp</th>
-                                    <th>Deliverable / Customer</th>
+                                    <th>Agent</th>
                                     <th>Status</th>
                                     <th>Steps</th>
                                     <th>Tokens</th>
@@ -187,6 +187,7 @@
             </div>
 
             <!-- Product Catalog View -->
+            <!-- Trigger Vercel Deploy -->
             <div id="productCatalogView" style="display: none;">
                 <header class="top-bar">
                     <div>
@@ -311,14 +312,30 @@
             </div>
             
             <div class="wizard-steps">
-                <div class="step active" id="step1-indicator">1. Add Provider Key</div>
-                <div class="step" id="step2-indicator">2. Agent Info</div>
+                <div class="step active" id="step1-indicator">1. Agent Info</div>
+                <div class="step" id="step2-indicator">2. Add Provider Key</div>
                 <div class="step" id="step3-indicator">3. Get Credentials</div>
             </div>
 
             <div class="modal-body">
-                <!-- Step 1: Add LLM Provider Key -->
+                <!-- Step 1: Agent Info -->
                 <div class="step-content active" id="step1">
+                    <div class="form-group">
+                        <label>Agent Name <span class="required">*</span></label>
+                        <input type="text" class="form-input" id="agentNameInput" placeholder="e.g., Customer Support Bot">
+                    </div>
+                    <div class="form-group">
+                        <label>Description (Optional)</label>
+                        <textarea class="form-input" id="agentDescInput" rows="2" placeholder="Brief description..."></textarea>
+                    </div>
+                    <div class="modal-actions">
+                        <button class="secondary-btn" onclick="closeAddAgentModal()">Cancel</button>
+                        <button class="primary-btn" onclick="goToStep(2)">Next: Add Keys</button>
+                    </div>
+                </div>
+
+                <!-- Step 2: Add LLM Provider Key -->
+                <div class="step-content" id="step2">
                     <div class="form-group">
                         <label>LLM Provider</label>
                         <select class="form-select" id="providerSelect">
@@ -328,35 +345,24 @@
                         </select>
                     </div>
                     <div class="form-group">
-                        <label>Key Label</label>
+                        <label>Key Label <span class="required">*</span></label>
                         <input type="text" class="form-input" id="keyLabelInput" placeholder="e.g., My Production Key">
                     </div>
                     <div class="form-group">
                         <label>API Key</label>
-                        <input type="password" class="form-input" id="apiKeyInput" placeholder="sk-...">
-                    </div>
-                    <div class="modal-actions">
-                        <button class="secondary-btn" onclick="closeAddAgentModal()">Cancel</button>
-                        <button class="primary-btn" onclick="goToStep(2)">Next: Agent Info</button>
-                    </div>
-                </div>
-
-                <!-- Step 2: Agent Info -->
-                <div class="step-content" id="step2">
-                    <div class="form-group">
-                        <label>Agent Name</label>
-                        <input type="text" class="form-input" id="agentNameInput" placeholder="e.g., Customer Support Bot">
-                    </div>
-                    <div class="form-group">
-                        <label>Description (Optional)</label>
-                        <textarea class="form-input" id="agentDescInput" rows="2" placeholder="Brief description..."></textarea>
-                    </div>
-                    <div class="form-group">
-                        <label>Associate Provider Keys</label>
-                        <div class="key-selection-list" id="keySelectionList">
-                            <!-- Injected by JS -->
+                        <div class="input-group" style="display: flex; gap: 8px;">
+                            <input type="password" class="form-input" id="apiKeyInput" placeholder="sk-..." style="flex:1">
+                            <button class="secondary-btn" onclick="addProviderKey()">+ Add</button>
                         </div>
                     </div>
+                    
+                    <div class="form-group">
+                        <label>Configured Keys (Max 3)</label>
+                        <div class="key-selection-list" id="configuredKeysList">
+                            <div class="empty-keys-msg">No keys added yet.</div>
+                        </div>
+                    </div>
+
                     <div class="modal-actions">
                         <button class="secondary-btn" onclick="goToStep(1)">Back</button>
                         <button class="primary-btn" onclick="goToStep(3)">Next: Generate Credentials</button>
@@ -379,21 +385,17 @@
                             <p class="help-text">Please save this key securely. It will not be shown again.</p>
                         </div>
                         <div class="form-group">
-                            <label>Anyway Base URL</label>
-                            <div class="copy-field">
-                                <input type="text" readonly value="https://api.anyway.sh/v1/openai" id="generatedBaseUrl">
-                                <button class="copy-btn">Copy</button>
+                            <label>Anyway Base URLs</label>
+                            <div id="generatedBaseUrlsContainer">
+                                <!-- Injected by JS -->
                             </div>
                         </div>
                     </div>
 
                     <div class="code-integration">
                         <h4>Integration Example</h4>
-                        <div class="code-block" style="background: #f4f4f5; color: #333; border: 1px solid #e4e4e7;">
-const client = new OpenAI({
-  apiKey: "<span style="color:#059669">ANYWAY_API_KEY</span>",
-  baseURL: "<span style="color:#059669">https://api.anyway.sh/v1/openai</span>"
-});
+                        <div class="code-block" id="integrationCodeBlock" style="background: #f4f4f5; color: #333; border: 1px solid #e4e4e7;">
+                            <!-- Injected by JS -->
                         </div>
                     </div>
 
