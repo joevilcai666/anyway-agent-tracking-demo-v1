@@ -33,50 +33,30 @@
             
             <ul class="nav-menu">
                 <li class="nav-item active" id="nav-dashboard">
-                    <span class="nav-icon">📊</span>
+                    <span class="nav-icon"><svg xmlns="http://www.w3.org/2000/svg" class="lucide" viewBox="0 0 24 24"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg></span>
                     Dashboard
                 </li>
                 <li class="nav-item" id="nav-products">
-                    <span class="nav-icon">📦</span>
+                    <span class="nav-icon"><svg xmlns="http://www.w3.org/2000/svg" class="lucide" viewBox="0 0 24 24"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg></span>
                     Product Catalog
                 </li>
                 <li class="nav-item" id="nav-orders">
-                    <span class="nav-icon">📄</span>
+                    <span class="nav-icon"><svg xmlns="http://www.w3.org/2000/svg" class="lucide" viewBox="0 0 24 24"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg></span>
                     Orders
                 </li>
                 <li class="nav-item" id="nav-finance">
-                    <span class="nav-icon">💰</span>
+                    <span class="nav-icon"><svg xmlns="http://www.w3.org/2000/svg" class="lucide" viewBox="0 0 24 24"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg></span>
                     Finance
                 </li>
             </ul>
 
             <div class="nav-divider"></div>
             
-            <div class="user-profile" id="userProfile">
-                <div class="avatar">D</div>
+            <div class="user-profile" id="userProfile" onclick="openAccountPanel(event)">
+                <div class="avatar" style="background-color: hsl(var(--brand-yellow)); color: black; border: none;">D</div>
                 <div class="user-info">
                     <div class="user-name">demo</div>
                     <div class="user-email">demo@anyway.sh</div>
-                </div>
-                <div class="settings-icon" id="settingsIcon">⚙️</div>
-                
-                <!-- Settings Dropdown -->
-                <div class="settings-dropdown" id="settingsDropdown">
-                    <div class="dropdown-header">
-                        <div class="user-name">demo</div>
-                        <div class="user-email">demo@anyway.sh</div>
-                    </div>
-                    <div class="dropdown-divider"></div>
-                    <div class="dropdown-item" id="menuApiKeys">
-                        <span class="icon">🔑</span> API Keys
-                    </div>
-                    <div class="dropdown-item">
-                        <span class="icon">👤</span> Profile
-                    </div>
-                    <div class="dropdown-divider"></div>
-                    <div class="dropdown-item">
-                        <span class="icon">🚪</span> Logout
-                    </div>
                 </div>
             </div>
         </nav>
@@ -93,16 +73,14 @@
                     <div class="controls">
                         <button class="secondary-btn" id="manageAgentsBtn" style="margin-right: 8px;">Settings</button>
                         <button class="primary-btn" id="addAgentBtn">+ Add Agent</button>
-                        <div class="date-picker" style="margin-left: 16px;">
-                            <span>📅 Today: Dec 25</span>
-                        </div>
+
                     </div>
                 </header>
 
                 <!-- Empty State (Hidden by default) -->
                 <div id="emptyState" class="empty-state" style="display: none;">
                     <div class="empty-content">
-                        <div class="empty-icon">🤖</div>
+                        <div class="empty-icon"><svg xmlns="http://www.w3.org/2000/svg" class="lucide" viewBox="0 0 24 24"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></svg></div>
                         <h2>No Agents Configured</h2>
                         <p>Get started by adding your first Agent to track its performance and costs.</p>
                         <button class="primary-btn large" onclick="openAddAgentModal()">+ Configure First Agent</button>
@@ -116,22 +94,22 @@
                     <div class="kpi-card">
                         <div class="kpi-label">Total Deliveries</div>
                         <div class="kpi-value">1,248</div>
-                        <div class="kpi-trend positive">↗ 12% vs yesterday</div>
+                        <div class="kpi-trend positive"><svg xmlns="http://www.w3.org/2000/svg" class="lucide" width="14" height="14" viewBox="0 0 24 24"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg> 12% vs yesterday</div>
                     </div>
                     <div class="kpi-card">
                         <div class="kpi-label">Total Cost</div>
                         <div class="kpi-value">$42.80</div>
-                        <div class="kpi-trend neutral">→ Stable</div>
+                        <div class="kpi-trend neutral"><svg xmlns="http://www.w3.org/2000/svg" class="lucide" width="14" height="14" viewBox="0 0 24 24"><line x1="5" x2="19" y1="12" y2="12"/></svg> Stable</div>
                     </div>
                     <div class="kpi-card">
                         <div class="kpi-label">Avg. Margin</div>
                         <div class="kpi-value">68%</div>
-                        <div class="kpi-trend positive">↗ 2% vs yesterday</div>
+                        <div class="kpi-trend positive"><svg xmlns="http://www.w3.org/2000/svg" class="lucide" width="14" height="14" viewBox="0 0 24 24"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg> 2% vs yesterday</div>
                     </div>
                     <div class="kpi-card">
                         <div class="kpi-label">Success Rate</div>
                         <div class="kpi-value error-text">94.2%</div>
-                        <div class="kpi-trend negative">↘ 1.5% vs yesterday</div>
+                        <div class="kpi-trend negative"><svg xmlns="http://www.w3.org/2000/svg" class="lucide" width="14" height="14" viewBox="0 0 24 24"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/></svg> 1.5% vs yesterday</div>
                     </div>
                 </section>
 
@@ -226,31 +204,58 @@
                 </section>
             </div>
 
-            <!-- API Keys View -->
-            <div id="apiKeysView" style="display: none;">
+            <!-- Developers View -->
+            <div id="developersView" style="display: none;">
                 <header class="top-bar">
                     <div>
-                        <h1>API Keys</h1>
+                        <h1>Developers</h1>
+                        <p class="subtitle">Manage your API keys and access tokens.</p>
+                    </div>
+                    <div class="controls">
+                        <button class="primary-btn" onclick="openCreateKeyModal()">+ Create API Key</button>
                     </div>
                 </header>
 
+                <!-- SDK API Keys -->
                 <section class="table-section">
-                    <div class="section-header" style="justify-content: space-between;">
-                        <input type="text" placeholder="Search via name" class="search-input" style="width: 320px;">
-                        <button class="primary-btn">+ Add API Key</button>
+                    <div class="section-header">
+                        <h2>SDK API Key</h2>
                     </div>
                     <div class="table-container">
                         <table class="data-table">
                             <thead>
                                 <tr>
                                     <th>Name</th>
-                                    <th>Key</th>
-                                    <th>Webhook secret</th>
+                                    <th>Token</th>
                                     <th>Created</th>
-                                    <th></th>
+                                    <th>Last used</th>
+                                    <th>Actions</th>
                                 </tr>
                             </thead>
-                            <tbody id="apiKeysTableBody">
+                            <tbody id="sdkKeysTableBody">
+                                <!-- JS will populate this -->
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- Payment API Keys -->
+                <section class="table-section">
+                    <div class="section-header">
+                        <h2>Payment API Key</h2>
+                    </div>
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Token</th>
+                                    <th>Created</th>
+                                    <th>Last used</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="paymentKeysTableBody">
                                 <!-- JS will populate this -->
                             </tbody>
                         </table>
@@ -372,7 +377,7 @@
                 <!-- Step 3: Credentials -->
                 <div class="step-content" id="step3">
                     <div class="success-message">
-                        <span class="icon">✅</span> Agent Configured Successfully!
+                        <span class="icon"><svg xmlns="http://www.w3.org/2000/svg" class="lucide text-green-500" viewBox="0 0 24 24" style="color: hsl(var(--success));"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></span> Agent Configured Successfully!
                     </div>
                     
                     <div class="credentials-box">
@@ -578,6 +583,129 @@
                     <div class="modal-actions">
                         <button class="primary-btn" onclick="finishAddProduct()">Done</button>
                     </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Account Popover -->
+    <div id="accountPanel" class="account-popover">
+        <div class="popover-header">
+            <div class="avatar" style="width: 36px; height: 36px; background-color: hsl(var(--brand-yellow)); color: black; border: none; font-size: 14px;">D</div>
+            <div style="overflow: hidden;">
+                <div style="font-weight: 600; font-size: 14px;">demo</div>
+                <div style="font-size: 12px; color: hsl(var(--muted-foreground)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">demo@anyway.sh</div>
+            </div>
+        </div>
+        
+        <div class="popover-item" onclick="navigateToDevelopers()">
+            <span class="icon" style="margin-right: 8px; width: 16px; height: 16px; display: flex; align-items: center; justify-content: center;">
+                <svg xmlns="http://www.w3.org/2000/svg" class="lucide" viewBox="0 0 24 24" width="16" height="16"><circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6"/><path d="m15.5 7.5 3 3L22 7l-3-3"/></svg>
+            </span>
+            Developers
+        </div>
+
+        <div style="height: 1px; background: hsl(var(--border)); margin: 4px 0;"></div>
+
+        <div class="popover-item" onclick="alert('Sign Out Clicked (Prototype)')">
+            <span class="icon" style="margin-right: 8px; width: 16px; height: 16px; display: flex; align-items: center; justify-content: center;">
+                <svg xmlns="http://www.w3.org/2000/svg" class="lucide" viewBox="0 0 24 24" width="16" height="16"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>
+            </span>
+            Sign Out
+        </div>
+    </div>
+
+    <!-- Create API Key Modal -->
+    <div class="modal-backdrop" id="createKeyBackdrop">
+        <div class="modal-container" id="createKeyModal">
+            <div class="modal-header">
+                <h2>Create API Key</h2>
+                <button class="close-btn" onclick="closeCreateKeyModal()">×</button>
+            </div>
+            
+            <div class="modal-body" id="createKeyFormStep">
+                <div class="form-group">
+                    <label>Key Type</label>
+                    <div class="radio-group" style="display: flex; flex-direction: column; gap: 12px;">
+                        <label class="radio-card" style="display: flex; align-items: flex-start; gap: 12px; padding: 12px; border: 1px solid hsl(var(--border)); border-radius: var(--radius); cursor: pointer;">
+                            <input type="radio" name="keyType" value="sdk" checked style="margin-top: 4px;">
+                            <div>
+                                <div style="font-weight: 500; margin-bottom: 2px;">SDK API Key</div>
+                                <div style="font-size: 12px; color: hsl(var(--muted-foreground));">Trace agent data and integrate with your application.</div>
+                            </div>
+                        </label>
+                        <label class="radio-card" style="display: flex; align-items: flex-start; gap: 12px; padding: 12px; border: 1px solid hsl(var(--border)); border-radius: var(--radius); cursor: pointer;">
+                            <input type="radio" name="keyType" value="payment" style="margin-top: 4px;">
+                            <div>
+                                <div style="font-weight: 500; margin-bottom: 2px;">Payment API Key</div>
+                                <div style="font-size: 12px; color: hsl(var(--muted-foreground));">Query user payment data and verify subscription status.</div>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Name</label>
+                    <input type="text" class="form-input" id="newKeyName" placeholder="e.g. Production Server">
+                </div>
+                
+                <div class="modal-actions">
+                    <button class="secondary-btn" onclick="closeCreateKeyModal()">Cancel</button>
+                    <button class="primary-btn" id="createKeyBtn" onclick="generateKey()">Create Key</button>
+                </div>
+            </div>
+            
+            <div class="modal-body" id="createKeyResultStep" style="display: none;">
+                <div class="success-message" style="margin-bottom: 24px; display: flex; align-items: flex-start; gap: 12px; background: hsl(var(--success-bg)); color: hsl(var(--success-foreground)); padding: 12px; border-radius: var(--radius);">
+                    <span class="icon" style="color: hsl(var(--success));">🎉</span> 
+                    <div>
+                        <div style="font-weight: 600; margin-bottom: 4px;">Your New API Key</div>
+                        <div style="font-size: 13px; color: hsl(var(--foreground));">
+                            <strong>Keep your key safe</strong><br>
+                            Save and store this new key to a secure place. You won’t be able to see it again.
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Secret Key</label>
+                    <div class="copy-field">
+                        <input type="text" id="newKeySecret" readonly value="ak_test_..." style="font-family: monospace;">
+                        <button class="copy-btn" onclick="copyNewKey()">Copy</button>
+                    </div>
+                    <p class="help-text" style="margin-top: 8px; font-size: 12px; color: hsl(var(--muted-foreground));">This key will be shown only once. Copy and store it securely.</p>
+                </div>
+                
+                <div class="modal-actions">
+                    <button class="primary-btn" id="doneKeyBtn" onclick="closeCreateKeyModal()">Done</button>
+                </div>
+            </div>
+
+            <!-- Error Step -->
+            <div class="modal-body" id="createKeyErrorStep" style="display: none;">
+                <div class="error-message" style="margin-bottom: 24px; display: flex; align-items: flex-start; gap: 12px; background: #fee2e2; color: #ef4444; padding: 12px; border-radius: var(--radius);">
+                    <span class="icon" style="color: #ef4444;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
+                    </span> 
+                    <div>
+                        <div style="font-weight: 600; margin-bottom: 4px;">Failed to create API Key</div>
+                        <div style="font-size: 13px; color: #7f1d1d;">
+                            Something went wrong while creating your key. Please try again.
+                        </div>
+                        <div style="font-size: 12px; margin-top: 8px; font-family: monospace; color: #991b1b;">Code: 500_INTERNAL_ERROR</div>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Request ID</label>
+                    <div class="copy-field">
+                        <input type="text" id="errorRequestId" readonly value="req_*************" style="font-family: monospace;">
+                        <button class="copy-btn" onclick="copyRequestId()">Copy</button>
+                    </div>
+                </div>
+                
+                <div class="modal-actions">
+                    <button class="secondary-btn" onclick="closeCreateKeyModal()">Cancel</button>
+                    <button class="primary-btn" onclick="generateKey()">Retry</button>
                 </div>
             </div>
         </div>

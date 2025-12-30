@@ -6,6 +6,14 @@
  * 3. Handles "Drill-down" interaction to show Trace Details.
  */
 
+const ICONS = {
+    eye: `<svg xmlns="http://www.w3.org/2000/svg" class="lucide" width="14" height="14" viewBox="0 0 24 24"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>`,
+    bot: `<svg xmlns="http://www.w3.org/2000/svg" class="lucide" width="16" height="16" viewBox="0 0 24 24" style="margin-right:8px"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></svg>`,
+    openai: `<svg width="12" height="12" viewBox="0 0 24 24" fill="#10a37f"><circle cx="12" cy="12" r="12"/></svg>`,
+    anthropic: `<svg width="12" height="12" viewBox="0 0 24 24" fill="#d97757"><circle cx="12" cy="12" r="12"/></svg>`,
+    gemini: `<svg width="12" height="12" viewBox="0 0 24 24" fill="#4b90ff"><circle cx="12" cy="12" r="12"/></svg>`
+};
+
 // --- Mock Data Generation ---
 
 // "Deliverables" are the products/agents being sold. "Runs" are instances of them.
@@ -77,12 +85,10 @@ function generateRuns(count = 15) {
 
 function generateApiKeys() {
     return [
-        { id: 1, name: "testesttest", key: "ak_*************3Wg", secret: "************************************************", created: "2025-12-23" },
-        { id: 2, name: "testtest", key: "ak_*************Zl0s", secret: "************************************************", created: "2025-12-19" },
-        { id: 3, name: "staging", key: "ak_*************ED_4", secret: "************************************************", created: "2025-10-23" },
-        { id: 4, name: "uat-key", key: "ak_*************E3Dg", secret: "************************************************", created: "2025-10-22" },
-        { id: 5, name: "mor-test", key: "ak_*************nEzM", secret: "************************************************", created: "2025-10-13" },
-        { id: 6, name: "dev-key", key: "ak_*************0iNs", secret: "************************************************", created: "2025-09-09" }
+        { id: 1, name: "Production Server", type: "sdk", key: "ak_live_*************3Wg", secret: "sk_live_************************************************", created: "Dec 23", lastUsed: "Dec 29", expiration: null, permissions: [] },
+        { id: 2, name: "Test Environment", type: "sdk", key: "ak_test_*************Zl0s", secret: "sk_test_************************************************", created: "Dec 19", lastUsed: "Dec 20", expiration: null, permissions: [] },
+        { id: 3, name: "Stripe Connect", type: "payment", key: "pk_live_*************ED_4", secret: "sk_live_************************************************", created: "Oct 23", lastUsed: "Dec 28", expiration: null, permissions: [] },
+        { id: 4, name: "Payment Test", type: "payment", key: "pk_test_*************E3Dg", secret: "sk_test_************************************************", created: "Oct 22", lastUsed: "Never", expiration: null, permissions: [] }
     ];
 }
 
@@ -90,6 +96,7 @@ const state = {
     runs: generateRuns(),
     selectedRun: null,
     apiKeys: generateApiKeys(),
+    editingKeyId: null, // Track which key is being edited
     agents: [], // New Agent State
     products: [], // New Product Catalog State
     llmKeys: [], // New LLM Provider Keys
@@ -129,15 +136,24 @@ const chartContainer = document.getElementById('mainChart');
 
 // New DOM Elements
 const dashboardView = document.getElementById('dashboardView');
-const apiKeysView = document.getElementById('apiKeysView');
+const developersView = document.getElementById('developersView'); // NEW
 const productCatalogView = document.getElementById('productCatalogView'); // New
 const settingsIcon = document.getElementById('settingsIcon');
 const settingsDropdown = document.getElementById('settingsDropdown');
 const menuApiKeys = document.getElementById('menuApiKeys');
-const apiKeysTableBody = document.getElementById('apiKeysTableBody');
 const productTableBody = document.getElementById('productTableBody'); // New
 const navDashboard = document.getElementById('nav-dashboard');
 const navProducts = document.getElementById('nav-products'); // New
+
+// Developers & Account Elements
+const sdkKeysTableBody = document.getElementById('sdkKeysTableBody');
+const paymentKeysTableBody = document.getElementById('paymentKeysTableBody');
+const accountPanel = document.getElementById('accountPanel');
+const accountPanelBackdrop = document.getElementById('accountPanelBackdrop');
+const createKeyBackdrop = document.getElementById('createKeyBackdrop');
+const createKeyFormStep = document.getElementById('createKeyFormStep');
+const createKeyResultStep = document.getElementById('createKeyResultStep');
+const createKeyErrorStep = document.getElementById('createKeyErrorStep');
 
 // Agent Modals
 const addAgentBackdrop = document.getElementById('addAgentBackdrop');
@@ -151,21 +167,9 @@ const dashboardContent = document.getElementById('dashboardContent');
 // --- Agent Logic ---
 
 function renderDashboard() {
-    // If no agents, show empty state (Simulated logic: for demo, we might want to start with 1 agent)
-    // But per requirements, let's respect the state.
-    // For this prototype, let's initialize with 0 agents to show the empty state flow,
-    // OR initialize with 1 mock agent if we want to show data immediately.
-    // Given the "New Requirement" explicitly asks for empty state handling, let's start empty OR check state.
-    
-    // Initial Seed if empty (Optional, but let's leave it empty to test flow)
-    // state.agents = [{ id: 1, name: "Demo Agent", providerCount: 1 }]; 
-    
     if (state.agents.length === 0) {
         if(emptyState) emptyState.style.display = 'flex';
         if(dashboardContent) dashboardContent.style.display = 'none';
-        // Hide add button in header if empty state is main focus? 
-        // Requirement says: "When empty, entry button as visual focus (center)". 
-        // We have the center button. We can hide the header button to reduce clutter or keep it.
     } else {
         if(emptyState) emptyState.style.display = 'none';
         if(dashboardContent) dashboardContent.style.display = 'block';
@@ -306,7 +310,7 @@ function renderConfiguredKeys() {
     
     list.innerHTML = state.wizardData.keys.map(k => `
         <div class="key-option" style="cursor: default;">
-            <span>${k.provider === 'openai' ? '🟢' : k.provider === 'anthropic' ? '🟠' : '🔵'}</span>
+            <span>${k.provider === 'openai' ? ICONS.openai : k.provider === 'anthropic' ? ICONS.anthropic : ICONS.gemini}</span>
             <div style="flex:1">
                 <div style="font-weight:500; font-size:13px">${k.label}</div>
                 <div style="font-size:11px; color:var(--text-secondary)">
@@ -387,7 +391,7 @@ window.selectAgent = function(id) {
     // Generate Keys HTML
     const keysHtml = (agent.keys || []).map(k => `
         <div class="key-option" style="cursor: default; margin-bottom: 8px;">
-            <span>${k.provider === 'openai' ? '🟢' : k.provider === 'anthropic' ? '🟠' : '🔵'}</span>
+            <span>${k.provider === 'openai' ? ICONS.openai : k.provider === 'anthropic' ? ICONS.anthropic : ICONS.gemini}</span>
             <div style="flex:1">
                 <div style="font-weight:500; font-size:13px">${k.label}</div>
                 <div style="font-size:11px; color:var(--text-secondary)">
@@ -594,32 +598,113 @@ function closePanel() {
     backdrop.classList.remove('open');
 }
 
-function renderApiKeys() {
-    apiKeysTableBody.innerHTML = state.apiKeys.map(key => `
+// NEW: Render Developers
+function renderDevelopers() {
+    const sdkKeys = state.apiKeys.filter(k => k.type === 'sdk');
+    const paymentKeys = state.apiKeys.filter(k => k.type === 'payment');
+
+    const renderRow = (key) => {
+        const isEditing = state.editingKeyId === key.id;
+        
+        const nameCellContent = isEditing ? `
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <input type="text" id="edit-key-name-${key.id}" class="form-input" value="${key.name}" 
+                    style="height: 28px; width: 160px; font-size: 13px; padding: 0 8px;" 
+                    onkeydown="handleKeyNameKeydown(event, ${key.id})" autofocus>
+                <button class="primary-btn icon-only" onclick="saveKeyName(${key.id})" title="Save" style="width: 28px; height: 28px; padding: 0;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                </button>
+                <button class="secondary-btn icon-only" onclick="cancelEditingKeyName()" title="Cancel" style="width: 28px; height: 28px; padding: 0;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+            </div>
+        ` : `
+            <div class="editable-name-container" style="display: flex; align-items: center; gap: 8px;">
+                <span style="font-weight: 500;">${key.name}</span>
+                <button class="view-btn icon-only edit-btn" onclick="startEditingKeyName(${key.id})" title="Rename" style="border:none; padding: 4px; height: auto; color: var(--text-secondary); opacity: 0.6; cursor: pointer;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                </button>
+            </div>
+        `;
+
+        return `
         <tr>
-            <td style="font-weight: 500;">${key.name}</td>
-            <td>
-                <div class="masked-key">
-                    ${key.key}
-                    <span class="eye-icon" title="Reveal">👁️</span>
-                </div>
-            </td>
-            <td>
-                <div class="masked-key">
-                    ${key.secret}
-                    <span class="eye-icon" title="Reveal">👁️</span>
-                </div>
-            </td>
+            <td>${nameCellContent}</td>
+            <td><code class="masked-key" style="font-family:monospace; background: hsl(var(--muted)); padding: 2px 6px; border-radius: 4px;">${key.key}</code></td>
             <td style="color: var(--text-secondary); font-size: 13px;">${key.created}</td>
-            <td><button class="delete-action" onclick="deleteApiKey(${key.id})">Delete</button></td>
+            <td style="color: var(--text-secondary); font-size: 13px;">${key.lastUsed || 'Never'}</td>
+            <td>
+                <button class="secondary-btn icon-only" onclick="deleteApiKey(${key.id})" style="padding: 6px; height: auto;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
+                </button>
+            </td>
         </tr>
-    `).join('');
+        `;
+    };
+
+    if (sdkKeysTableBody) {
+        if (sdkKeys.length === 0) {
+            sdkKeysTableBody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding: 24px; color: var(--text-secondary);">Create an API key to connect your SDK</td></tr>`;
+        } else {
+            sdkKeysTableBody.innerHTML = sdkKeys.map(renderRow).join('');
+        }
+    }
+
+    if (paymentKeysTableBody) {
+        if (paymentKeys.length === 0) {
+            paymentKeysTableBody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding: 24px; color: var(--text-secondary);">Create an API key to connect your payment data</td></tr>`;
+        } else {
+            paymentKeysTableBody.innerHTML = paymentKeys.map(renderRow).join('');
+        }
+    }
+    
+    // Focus input if editing
+    if (state.editingKeyId) {
+        const input = document.getElementById(`edit-key-name-${state.editingKeyId}`);
+        if (input) {
+            input.focus();
+            // Move cursor to end
+            const val = input.value;
+            input.value = '';
+            input.value = val;
+        }
+    }
+}
+
+window.startEditingKeyName = function(id) {
+    state.editingKeyId = id;
+    renderDevelopers();
+}
+
+window.cancelEditingKeyName = function() {
+    state.editingKeyId = null;
+    renderDevelopers();
+}
+
+window.saveKeyName = function(id) {
+    const input = document.getElementById(`edit-key-name-${id}`);
+    if (input && input.value.trim()) {
+        const key = state.apiKeys.find(k => k.id === id);
+        if (key) {
+            key.name = input.value.trim();
+        }
+    }
+    state.editingKeyId = null;
+    renderDevelopers();
+}
+
+window.handleKeyNameKeydown = function(event, id) {
+    if (event.key === 'Enter') {
+        saveKeyName(id);
+    } else if (event.key === 'Escape') {
+        cancelEditingKeyName();
+    }
 }
 
 window.deleteApiKey = function(id) {
     if(confirm('Are you sure you want to delete this API Key?')) {
         state.apiKeys = state.apiKeys.filter(k => k.id !== id);
-        renderApiKeys();
+        renderDevelopers();
     }
 }
 
@@ -628,8 +713,8 @@ function switchView(viewName) {
     
     // Hide all views
     dashboardView.style.display = 'none';
-    apiKeysView.style.display = 'none';
-    if(productCatalogView) productCatalogView.style.display = 'none'; // New
+    if(productCatalogView) productCatalogView.style.display = 'none';
+    if(developersView) developersView.style.display = 'none';
     
     // Update Nav Active State
     document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
@@ -637,18 +722,162 @@ function switchView(viewName) {
     if (viewName === 'dashboard') {
         dashboardView.style.display = 'block';
         if(navDashboard) navDashboard.classList.add('active');
-    } else if (viewName === 'api-keys') {
-        apiKeysView.style.display = 'block';
-        renderApiKeys();
-    } else if (viewName === 'products') { // New
+    } else if (viewName === 'products') {
         if(productCatalogView) productCatalogView.style.display = 'block';
         if(navProducts) navProducts.classList.add('active');
         renderProductCatalog();
+    } else if (viewName === 'developers') {
+        if(developersView) developersView.style.display = 'block';
+        renderDevelopers();
     }
     
     // Close dropdown
-    settingsDropdown.classList.remove('active');
+    if(settingsDropdown) settingsDropdown.classList.remove('active');
 }
+
+// NEW: Account Panel Functions (Popover)
+window.openAccountPanel = function(event) {
+    if(event) event.stopPropagation();
+    if(accountPanel) {
+        accountPanel.classList.toggle('active');
+    }
+}
+
+window.closeAccountPanel = function() {
+    if(accountPanel) accountPanel.classList.remove('active');
+}
+
+window.navigateToDevelopers = function() {
+    closeAccountPanel();
+    switchView('developers');
+}
+
+// Global Click Listener for Popovers
+document.addEventListener('click', function(event) {
+    // Close Account Panel if clicked outside
+    if(accountPanel && accountPanel.classList.contains('active')) {
+        if (!accountPanel.contains(event.target) && !event.target.closest('.user-profile')) {
+            closeAccountPanel();
+        }
+    }
+});
+
+// NEW: Create Key Modal Functions
+window.openCreateKeyModal = function() {
+    if(createKeyFormStep) createKeyFormStep.style.display = 'block';
+    if(createKeyResultStep) createKeyResultStep.style.display = 'none';
+    if(createKeyErrorStep) createKeyErrorStep.style.display = 'none';
+    
+    const nameInput = document.getElementById('newKeyName');
+    if(nameInput) nameInput.value = '';
+    
+    // Reset radio
+    const radios = document.getElementsByName('keyType');
+    if(radios.length > 0) radios[0].checked = true;
+    
+    if(createKeyBackdrop) createKeyBackdrop.classList.add('active');
+}
+
+window.closeCreateKeyModal = function() {
+    if(createKeyBackdrop) createKeyBackdrop.classList.remove('active');
+}
+
+window.generateKey = function() {
+    const nameInput = document.getElementById('newKeyName');
+    const name = (nameInput && nameInput.value) ? nameInput.value : "New API Key";
+    
+    // Error Simulation: If name contains "fail" or "error", show error state
+    if (name.toLowerCase().includes('fail') || name.toLowerCase().includes('error')) {
+         if(createKeyFormStep) createKeyFormStep.style.display = 'none';
+         if(createKeyResultStep) createKeyResultStep.style.display = 'none';
+         if(createKeyErrorStep) createKeyErrorStep.style.display = 'block';
+         
+         // Generate Mock Request ID
+         const reqId = "req_" + Math.random().toString(36).substr(2, 10) + Math.random().toString(36).substr(2, 4);
+         const reqIdInput = document.getElementById('errorRequestId');
+         if(reqIdInput) reqIdInput.value = reqId;
+         
+         return; 
+    }
+
+    if(createKeyErrorStep) createKeyErrorStep.style.display = 'none';
+
+    // Get Type
+    const radios = document.getElementsByName('keyType');
+    let type = 'sdk';
+    for (const radio of radios) {
+        if (radio.checked) {
+            type = radio.value;
+            break;
+        }
+    }
+
+    const prefix = type === 'sdk' ? 'ak' : 'pk';
+    const env = name.toLowerCase().includes('prod') ? 'live' : 'test';
+    const key = `${prefix}_${env}_${Math.random().toString(36).substr(2, 16)}`;
+    const secret = `sk_${env}_${Math.random().toString(36).substr(2, 24)}`;
+
+    const newKey = {
+        id: Date.now(),
+        name: name,
+        type: type,
+        key: key,
+        secret: secret,
+        created: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+        lastUsed: 'Never',
+        expiration: null,
+        permissions: []
+    };
+
+    state.apiKeys.unshift(newKey);
+    
+    // Show Result
+    if(createKeyFormStep) createKeyFormStep.style.display = 'none';
+    if(createKeyErrorStep) createKeyErrorStep.style.display = 'none';
+    if(createKeyResultStep) createKeyResultStep.style.display = 'block';
+    
+    const secretInput = document.getElementById('newKeySecret');
+    if(secretInput) secretInput.value = secret;
+    
+    renderDevelopers();
+}
+
+window.copyRequestId = function() {
+    const input = document.getElementById('errorRequestId');
+    if(input) {
+        input.select();
+        document.execCommand('copy'); // Fallback
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+             navigator.clipboard.writeText(input.value);
+        }
+        
+        const btn = event.target;
+        if(btn) {
+            const originalText = btn.textContent;
+            btn.textContent = "Copied!";
+            setTimeout(() => btn.textContent = originalText, 1500);
+        }
+    }
+}
+
+window.copyNewKey = function() {
+    const input = document.getElementById('newKeySecret');
+    if(input) {
+        input.select();
+        document.execCommand('copy'); // Fallback
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+             navigator.clipboard.writeText(input.value);
+        }
+        
+        const btn = event.target; // Simple way to get the button
+        if(btn) {
+            const originalText = btn.textContent;
+            btn.textContent = "Copied!";
+            setTimeout(() => btn.textContent = originalText, 1500);
+        }
+    }
+}
+
 
 // --- Event Listeners ---
 
@@ -680,7 +909,7 @@ if(settingsDropdown) {
 
 if(menuApiKeys) {
     menuApiKeys.addEventListener('click', () => {
-        switchView('api-keys');
+        switchView('developers'); // Changed to developers
     });
 }
 
@@ -698,7 +927,7 @@ if(navProducts) {
 
 // Global Copy Button Handler
 document.addEventListener('click', (e) => {
-    if (e.target.classList.contains('copy-btn')) {
+    if (e.target.classList.contains('copy-btn') && e.target.onclick === null) {
         const input = e.target.previousElementSibling;
         if (input && input.tagName === 'INPUT') {
             input.select();
@@ -720,6 +949,11 @@ document.addEventListener('click', (e) => {
         }
     }
 });
+
+// Add listeners for account panel backdrop
+if(accountPanelBackdrop) {
+    accountPanelBackdrop.addEventListener('click', closeAccountPanel);
+}
 
 // --- Product Catalog Logic ---
 
@@ -888,7 +1122,7 @@ window.analyzePricing = function() {
     // Simulate AI Analysis
     const btn = event.target;
     const originalText = btn.innerHTML;
-    btn.innerHTML = "🤖 Analyzing Market Data...";
+    btn.innerHTML = `${ICONS.bot} Analyzing Market Data...`;
     btn.disabled = true;
     
     setTimeout(() => {
@@ -937,7 +1171,7 @@ function init() {
     
     renderTable();
     renderChart();
-    renderApiKeys();
+    // renderApiKeys(); // REMOVED: Replaced by renderDevelopers on view switch
     renderDashboard();
     console.log("Anyway Prototype Loaded. Data:", state);
 }
