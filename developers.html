@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="en">
+<!--
+  Scheme 1: Persistent Info Banner
+  
+  Changes:
+  1. Added .info-banner at the top of main content.
+  2. Added CSS for the banner.
+-->
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Anyway - Scheme 1: Info Banner</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* Scheme 1 Specific Styles */
+        .info-banner {
+            background-color: hsl(var(--brand-yellow) / 0.15); /* Light yellow bg */
+            border-bottom: 1px solid hsl(var(--brand-yellow) / 0.3);
+            color: hsl(var(--foreground));
+            padding: 12px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: -32px -40px 32px -40px; /* Negative margin to span full width */
+        }
+        .banner-content {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 14px;
+        }
+        .banner-content .icon {
+            font-size: 16px;
+        }
+        .banner-content .message {
+            font-weight: 600;
+        }
+        .banner-content .divider {
+            color: hsl(var(--muted-foreground));
+            opacity: 0.5;
+        }
+        .banner-content .sub-message {
+            color: hsl(var(--muted-foreground));
+        }
+        .banner-cta {
+            background-color: hsl(var(--brand-yellow));
+            color: black;
+            border: none;
+            padding: 6px 12px;
+            font-size: 13px;
+            font-weight: 500;
+            border-radius: var(--radius);
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+        .banner-cta:hover {
+            opacity: 0.9;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <nav class="sidebar">
+            <div class="logo-area">
+                <svg class="logo-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 2L2 19H22L12 2Z" fill="currentColor"/>
+                </svg>
+                <span class="logo-text">Anyway</span>
+            </div>
+            
+            <ul class="nav-menu">
+                <li class="nav-item active" id="nav-dashboard">
+                    <span class="nav-icon"><svg xmlns="http://www.w3.org/2000/svg" class="lucide" viewBox="0 0 24 24"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg></span>
+                    Dashboard
+                </li>
+                <li class="nav-item" id="nav-products">
+                    <span class="nav-icon"><svg xmlns="http://www.w3.org/2000/svg" class="lucide" viewBox="0 0 24 24"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg></span>
+                    Product Catalog
+                </li>
+                <li class="nav-item" id="nav-orders">
+                    <span class="nav-icon"><svg xmlns="http://www.w3.org/2000/svg" class="lucide" viewBox="0 0 24 24"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg></span>
+                    Orders
+                </li>
+                <li class="nav-item" id="nav-finance">
+                    <span class="nav-icon"><svg xmlns="http://www.w3.org/2000/svg" class="lucide" viewBox="0 0 24 24"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg></span>
+                    Finance
+                </li>
+            </ul>
+
+            <div class="nav-divider"></div>
+            
+            <div class="user-profile" id="userProfile" onclick="openAccountPanel(event)">
+                <div class="avatar" style="background-color: hsl(var(--brand-yellow)); color: black; border: none;">D</div>
+                <div class="user-info">
+                    <div class="user-name">demo</div>
+                    <div class="user-email">demo@anyway.sh</div>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- SCHEME 1: Persistent Info Banner -->
+            <div class="info-banner">
+                <div class="banner-content">
+                    <span class="icon"><svg xmlns="http://www.w3.org/2000/svg" class="lucide" width="16" height="16" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg></span>
+                    <span class="message">You’re viewing sample data</span>
+                    <span class="divider">|</span>
+                    <span class="sub-message">Connect Python SDK to see your first live Delivery trace</span>
+                </div>
+                <button class="banner-cta" onclick="openAddAgentModal()">Connect Python SDK</button>
+            </div>
+
+            <!-- Dashboard View -->
+            <div id="dashboardView">
+                <header class="top-bar">
+                    <div>
+                        <h1>Dashboard</h1>
+                        <p class="subtitle">Real-time tracking of Agent Runs & Resource Costs</p>
+                    </div>
+                    <div class="controls">
+                        <button class="secondary-btn" id="manageAgentsBtn" style="margin-right: 8px;">Settings</button>
+                        <button class="primary-btn" id="addAgentBtn">+ Add Agent</button>
+                    </div>
+                </header>
+
+                <!-- Empty State (Hidden by default, used for logic but here we show data) -->
+                <div id="emptyState" class="empty-state" style="display: none;">
+                    <!-- ... same as original ... -->
+                </div>
+
+                <!-- Dashboard Content Container -->
+                <div id="dashboardContent">
+                    <!-- KPI Cards -->
+                    <section class="kpi-grid">
+                        <div class="kpi-card">
+                            <div class="kpi-label">Total Deliveries</div>
+                            <div class="kpi-value">1,248</div>
+                            <div class="kpi-trend positive"><svg xmlns="http://www.w3.org/2000/svg" class="lucide" width="14" height="14" viewBox="0 0 24 24"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg> 12% vs yesterday</div>
+                        </div>
+                        <div class="kpi-card">
+                            <div class="kpi-label">Total Cost</div>
+                            <div class="kpi-value">$42.80</div>
+                            <div class="kpi-trend neutral"><svg xmlns="http://www.w3.org/2000/svg" class="lucide" width="14" height="14" viewBox="0 0 24 24"><line x1="5" x2="19" y1="12" y2="12"/></svg> Stable</div>
+                        </div>
+                        <div class="kpi-card">
+                            <div class="kpi-label">Avg. Margin</div>
+                            <div class="kpi-value">68%</div>
+                            <div class="kpi-trend positive"><svg xmlns="http://www.w3.org/2000/svg" class="lucide" width="14" height="14" viewBox="0 0 24 24"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg> 2% vs yesterday</div>
+                        </div>
+                        <div class="kpi-card">
+                            <div class="kpi-label">Success Rate</div>
+                            <div class="kpi-value error-text">94.2%</div>
+                            <div class="kpi-trend negative"><svg xmlns="http://www.w3.org/2000/svg" class="lucide" width="14" height="14" viewBox="0 0 24 24"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/></svg> 1.5% vs yesterday</div>
+                        </div>
+                    </section>
+
+                    <!-- Main Chart Area (Simplified Visualization) -->
+                    <section class="chart-section">
+                        <div class="section-header">
+                            <h2>Cost & Usage Analysis</h2>
+                            <div class="tabs">
+                                <button class="tab active">Daily</button>
+                                <button class="tab">Weekly</button>
+                                <button class="tab">Monthly</button>
+                            </div>
+                        </div>
+                        <div class="chart-placeholder" id="mainChart">
+                            <!-- Bars injected by JS -->
+                        </div>
+                    </section>
+
+                    <!-- Recent Deliveries Table -->
+                    <section class="table-section">
+                        <div class="section-header">
+                            <h2>Agent Deliveries</h2>
+                            <div class="table-filters">
+                                <input type="text" placeholder="Search Delivery ID..." class="search-input">
+                                <select class="filter-select">
+                                    <option>All Statuses</option>
+                                    <option>Success</option>
+                                    <option>Failed</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="table-container">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Delivery ID</th>
+                                        <th>Timestamp</th>
+                                        <th>Agent</th>
+                                        <th>Status</th>
+                                        <th>Steps</th>
+                                        <th>Tokens</th>
+                                        <th>Cost</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="runsTableBody">
+                                    <!-- Rows injected by JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </section>
+                </div>
+            </div>
+
+            <!-- Product Catalog View (Hidden) -->
+            <div id="productCatalogView" style="display: none;">
+                <!-- ... content ... -->
+                 <header class="top-bar">
+                    <div>
+                        <h1>Product Catalog</h1>
+                        <p class="subtitle">Manage your AI Agents as monetizable products</p>
+                    </div>
+                    <div class="controls">
+                        <button class="primary-btn" onclick="openAddProductModal()">+ Create Product</button>
+                    </div>
+                </header>
+
+                <section class="table-section">
+                    <div class="section-header">
+                        <h2>All Products</h2>
+                        <div class="table-filters">
+                            <input type="text" placeholder="Search products..." class="search-input">
+                        </div>
+                    </div>
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Product Name</th>
+                                    <th>Linked Agent</th>
+                                    <th>Price</th>
+                                    <th>Strategy</th>
+                                    <th>Status</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="productTableBody">
+                                <!-- JS will populate this -->
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            </div>
+
+            <!-- Developers View (Hidden) -->
+            <div id="developersView" style="display: none;">
+                <!-- ... content ... -->
+                <header class="top-bar">
+                    <div>
+                        <h1>Developers</h1>
+                        <p class="subtitle">Manage your API keys and access tokens.</p>
+                    </div>
+                    <div class="controls">
+                        <button class="primary-btn" onclick="openCreateKeyModal()">+ Create API Key</button>
+                    </div>
+                </header>
+
+                <!-- SDK API Keys -->
+                <section class="table-section">
+                    <div class="section-header">
+                        <h2>SDK API Key</h2>
+                    </div>
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Token</th>
+                                    <th>Created</th>
+                                    <th>Last used</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="sdkKeysTableBody">
+                                <!-- JS will populate this -->
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- Payment API Keys -->
+                <section class="table-section">
+                    <div class="section-header">
+                        <h2>Payment API Key</h2>
+                    </div>
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Token</th>
+                                    <th>Created</th>
+                                    <th>Last used</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="paymentKeysTableBody">
+                                <!-- JS will populate this -->
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            </div>
+        </main>
+
+        <!-- Trace Detail Slide-over Panel -->
+        <div class="slide-over-backdrop" id="tracePanelBackdrop"></div>
+        <aside class="slide-over-panel" id="tracePanel">
+            <div class="panel-header">
+                <div class="panel-title-group">
+                    <h2 id="detailDeliveryId">DEL-10234</h2>
+                    <span class="status-badge success" id="detailStatus">Success</span>
+                </div>
+                <button class="close-btn" id="closePanelBtn">×</button>
+            </div>
+            
+            <div class="panel-content">
+                <div class="panel-section summary">
+                    <div class="detail-item">
+                        <label>Total Cost</label>
+                        <span class="value cost" id="detailCost">$0.042</span>
+                    </div>
+                    <div class="detail-item">
+                        <label>Duration</label>
+                        <span class="value" id="detailDuration">1.2s</span>
+                    </div>
+                    <div class="detail-item">
+                        <label>Tokens</label>
+                        <span class="value" id="detailTokens">1,420</span>
+                    </div>
+                </div>
+
+                <div class="panel-section">
+                    <h3>Execution Trace</h3>
+                    <div class="trace-timeline" id="traceTimeline">
+                        <!-- Trace steps injected by JS -->
+                    </div>
+                </div>
+                
+                <div class="panel-section">
+                    <h3>Artifacts & Output</h3>
+                    <div class="code-block" id="detailOutput">
+                        <!-- Output injected by JS -->
+                    </div>
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <!-- Modals (Add Agent, Manage Agents, Add Product, Account, Create Key) -->
+    <!-- Add Agent Modal -->
+    <div class="modal-backdrop" id="addAgentBackdrop">
+        <div class="modal-container">
+            <div class="modal-header">
+                <h2>Configure New Agent</h2>
+                <button class="close-btn" onclick="closeAddAgentModal()">×</button>
+            </div>
+            
+            <div class="wizard-steps">
+                <div class="step active" id="step1-indicator">1. Agent Info</div>
+                <div class="step" id="step2-indicator">2. Add Provider Key</div>
+                <div class="step" id="step3-indicator">3. Get Credentials</div>
+            </div>
+
+            <div class="modal-body">
+                <!-- Step 1: Agent Info -->
+                <div class="step-content active" id="step1">
+                    <div class="form-group">
+                        <label>Agent Name <span class="required">*</span></label>
+                        <input type="text" class="form-input" id="agentNameInput" placeholder="e.g., Customer Support Bot">
+                    </div>
+                    <div class="form-group">
+                        <label>Description (Optional)</label>
+                        <textarea class="form-input" id="agentDescInput" rows="2" placeholder="Brief description..."></textarea>
+                    </div>
+                    <div class="modal-actions">
+                        <button class="secondary-btn" onclick="closeAddAgentModal()">Cancel</button>
+                        <button class="primary-btn" onclick="goToStep(2)">Next: Add Keys</button>
+                    </div>
+                </div>
+
+                <!-- Step 2: Add LLM Provider Key -->
+                <div class="step-content" id="step2">
+                    <div class="form-group">
+                        <label>LLM Provider</label>
+                        <select class="form-select" id="providerSelect">
+                            <option value="openai">OpenAI</option>
+                            <option value="anthropic">Anthropic</option>
+                            <option value="gemini">Gemini</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Key Label <span class="required">*</span></label>
+                        <input type="text" class="form-input" id="keyLabelInput" placeholder="e.g., My Production Key">
+                    </div>
+                    <div class="form-group">
+                        <label>API Key</label>
+                        <div class="input-group" style="display: flex; gap: 8px;">
+                            <input type="password" class="form-input" id="apiKeyInput" placeholder="sk-..." style="flex:1">
+                            <button class="secondary-btn" onclick="addProviderKey()">+ Add</button>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Configured Keys (Max 3)</label>
+                        <div class="key-selection-list" id="configuredKeysList">
+                            <div class="empty-keys-msg">No keys added yet.</div>
+                        </div>
+                    </div>
+
+                    <div class="modal-actions">
+                        <button class="secondary-btn" onclick="goToStep(1)">Back</button>
+                        <button class="primary-btn" onclick="goToStep(3)">Next: Generate Credentials</button>
+                    </div>
+                </div>
+
+                <!-- Step 3: Credentials -->
+                <div class="step-content" id="step3">
+                    <div class="success-message">
+                        <span class="icon"><svg xmlns="http://www.w3.org/2000/svg" class="lucide text-green-500" viewBox="0 0 24 24" style="color: hsl(var(--success));"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></span> Agent Configured Successfully!
+                    </div>
+                    
+                    <div class="credentials-box">
+                        <div class="form-group">
+                            <label>Anyway API Key</label>
+                            <div class="copy-field">
+                                <input type="text" readonly value="any_wk_89234789234..." id="generatedAnywayKey">
+                                <button class="copy-btn">Copy</button>
+                            </div>
+                            <p class="help-text">Please save this key securely. It will not be shown again.</p>
+                        </div>
+                        <div class="form-group">
+                            <label>Anyway Base URLs</label>
+                            <div id="generatedBaseUrlsContainer">
+                                <!-- Injected by JS -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="code-integration">
+                        <h4>Integration Example</h4>
+                        <div class="code-block" id="integrationCodeBlock" style="background: #f4f4f5; color: #333; border: 1px solid #e4e4e7;">
+                            <!-- Injected by JS -->
+                        </div>
+                    </div>
+
+                    <div class="modal-actions">
+                        <button class="secondary-btn" onclick="testConnection()">Test Connection</button>
+                        <button class="primary-btn" onclick="finishAddAgent()">Done</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Manage Agents Modal -->
+    <div class="modal-backdrop" id="manageAgentsBackdrop">
+        <div class="modal-container large">
+            <div class="modal-header">
+                <h2>Manage Agents</h2>
+                <button class="close-btn" onclick="closeManageAgentsModal()">×</button>
+            </div>
+            <div class="modal-body" style="padding: 0;">
+                <div class="manage-layout">
+                    <!-- Sidebar List -->
+                    <div class="manage-sidebar">
+                        <div class="list-header">All Agents</div>
+                        <div class="agent-list" id="agentList">
+                            <!-- Injected by JS -->
+                        </div>
+                    </div>
+                    
+                    <!-- Detail View -->
+                    <div class="manage-detail" id="manageDetailView">
+                        <div class="empty-selection">Select an agent to edit</div>
+                        <!-- Content Injected by JS -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Product Modal -->
+    <div class="modal-backdrop" id="addProductBackdrop">
+        <div class="modal-container large">
+            <div class="modal-header">
+                <h2>Create New Product</h2>
+                <button class="close-btn" onclick="closeAddProductModal()">×</button>
+            </div>
+            
+            <div class="wizard-steps">
+                <div class="step active" id="p-step1-indicator">1. Link Agent</div>
+                <div class="step" id="p-step2-indicator">2. Basic Info</div>
+                <div class="step" id="p-step3-indicator">3. Pricing Strategy</div>
+                <div class="step" id="p-step4-indicator">4. Finish</div>
+            </div>
+
+            <div class="modal-body">
+                <!-- Step 1: Link Agent -->
+                <div class="step-content active" id="p-step1">
+                    <div class="form-group">
+                        <label>Select an Agent to Productize</label>
+                        <p class="help-text">Linking an agent allows us to calculate costs automatically.</p>
+                        <select class="form-select" id="productAgentSelect">
+                            <option value="">-- Select an Agent --</option>
+                            <!-- Populated by JS -->
+                        </select>
+                    </div>
+                    <div class="separator-text">OR</div>
+                    <div class="option-card" id="standaloneOption" onclick="selectStandaloneProduct()">
+                        <div class="icon">📦</div>
+                        <div>
+                            <div class="title">Create Standalone Product</div>
+                            <div class="desc">For pure payment collection without linking to a specific agent execution.</div>
+                        </div>
+                        <div class="check-circle"></div>
+                    </div>
+                    
+                    <div class="modal-actions">
+                        <button class="secondary-btn" onclick="closeAddProductModal()">Cancel</button>
+                        <button class="primary-btn" onclick="productGoToStep(2)">Next</button>
+                    </div>
+                </div>
+
+                <!-- Step 2: Basic Info -->
+                <div class="step-content" id="p-step2">
+                    <div class="form-group">
+                        <label>Product Name</label>
+                        <input type="text" class="form-input" id="productNameInput" placeholder="e.g., SEO Pro Plan">
+                    </div>
+                    <div class="form-group">
+                        <label>Delivery Description</label>
+                        <textarea class="form-input" id="productDescInput" rows="3" placeholder="Describe what the customer gets..."></textarea>
+                    </div>
+                    <div class="modal-actions">
+                        <button class="secondary-btn" onclick="productGoToStep(1)">Back</button>
+                        <button class="primary-btn" onclick="productGoToStep(3)">Next: Pricing</button>
+                    </div>
+                </div>
+
+                <!-- Step 3: Pricing Strategy (AI) -->
+                <div class="step-content" id="p-step3">
+                    <div class="two-col-layout">
+                        <!-- Left: Inputs -->
+                        <div class="col-left">
+                            <h3>Pricing Factors</h3>
+                            <div class="form-group">
+                                <label>Target Audience</label>
+                                <select class="form-select" id="pricingAudience">
+                                    <option value="b2c">Individual (B2C)</option>
+                                    <option value="b2b_small">Small Team (B2B)</option>
+                                    <option value="b2b_enterprise">Enterprise</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Core Value Proposition</label>
+                                <input type="text" class="form-input" id="pricingUseCase" placeholder="e.g., Save 5 hours of research per week">
+                            </div>
+                            <div class="form-group">
+                                <label>Competitor Price (Optional)</label>
+                                <input type="text" class="form-input" id="pricingCompetitor" placeholder="e.g., $20/month">
+                            </div>
+                            <div class="form-group" id="manualCostGroup" style="display:none;">
+                                <label>Estimated Cost per Unit ($)</label>
+                                <input type="number" class="form-input" id="pricingCost" placeholder="0.00">
+                            </div>
+                             <div class="form-group">
+                                <label>Desired Margin % (Optional)</label>
+                                <input type="number" class="form-input" id="pricingMargin" placeholder="e.g. 50">
+                            </div>
+                            <button class="secondary-btn full-width" onclick="analyzePricing()">✨ Analyze & Suggest Price</button>
+                        </div>
+
+                        <!-- Right: AI Suggestion -->
+                        <div class="col-right">
+                            <div id="pricingAnalysisPlaceholder" class="analysis-placeholder">
+                                <span style="font-size: 24px;">🤖</span>
+                                <p>Fill in the factors and click Analyze to get AI-powered pricing suggestions.</p>
+                            </div>
+                            <div id="pricingAnalysisResult" class="analysis-result" style="display: none;">
+                                <div class="suggestion-card">
+                                    <div class="suggestion-label">Recommended Range</div>
+                                    <div class="suggestion-price" id="suggestedRange">$19 - $29</div>
+                                    <div class="suggestion-reason" id="suggestionReason">Based on your costs ($0.40) and B2C market averages.</div>
+                                </div>
+                                <div class="suggestion-card secondary">
+                                    <div class="suggestion-label">Anchor Price</div>
+                                    <div class="suggestion-price" id="suggestedAnchor">$39</div>
+                                </div>
+                            </div>
+                            
+                            <div class="final-price-area">
+                                <div class="form-group">
+                                    <label>Set Final Price (USD)</label>
+                                    <input type="number" class="form-input large-input" id="finalPriceInput" placeholder="0.00">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="modal-actions">
+                        <button class="secondary-btn" onclick="productGoToStep(2)">Back</button>
+                        <button class="primary-btn" onclick="productGoToStep(4)">Next: Generate Link</button>
+                    </div>
+                </div>
+
+                <!-- Step 4: Finish -->
+                <div class="step-content" id="p-step4">
+                    <div class="success-message">
+                        <span class="icon">🎉</span> Product Created Successfully!
+                    </div>
+                    
+                    <div class="credentials-box">
+                        <div class="form-group">
+                            <label>Payment Link</label>
+                            <div class="copy-field">
+                                <input type="text" readonly value="https://pay.anyway.sh/p/seo-pro-plan" id="generatedPaymentLink">
+                                <button class="copy-btn">Copy</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="modal-actions">
+                        <button class="primary-btn" onclick="finishAddProduct()">Done</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Account Popover -->
+    <div id="accountPanel" class="account-popover">
+        <div class="popover-header">
+            <div class="avatar" style="width: 36px; height: 36px; background-color: hsl(var(--brand-yellow)); color: black; border: none; font-size: 14px;">D</div>
+            <div style="overflow: hidden;">
+                <div style="font-weight: 600; font-size: 14px;">demo</div>
+                <div style="font-size: 12px; color: hsl(var(--muted-foreground)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">demo@anyway.sh</div>
+            </div>
+        </div>
+        
+        <div class="popover-item" onclick="navigateToDevelopers()">
+            <span class="icon" style="margin-right: 8px; width: 16px; height: 16px; display: flex; align-items: center; justify-content: center;">
+                <svg xmlns="http://www.w3.org/2000/svg" class="lucide" viewBox="0 0 24 24" width="16" height="16"><circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6"/><path d="m15.5 7.5 3 3L22 7l-3-3"/></svg>
+            </span>
+            Developers
+        </div>
+
+        <div style="height: 1px; background: hsl(var(--border)); margin: 4px 0;"></div>
+
+        <div class="popover-item" onclick="alert('Sign Out Clicked (Prototype)')">
+            <span class="icon" style="margin-right: 8px; width: 16px; height: 16px; display: flex; align-items: center; justify-content: center;">
+                <svg xmlns="http://www.w3.org/2000/svg" class="lucide" viewBox="0 0 24 24" width="16" height="16"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>
+            </span>
+            Sign Out
+        </div>
+    </div>
+
+    <!-- Create API Key Modal -->
+    <div class="modal-backdrop" id="createKeyBackdrop">
+        <div class="modal-container" id="createKeyModal">
+            <div class="modal-header">
+                <h2>Create API Key</h2>
+                <button class="close-btn" onclick="closeCreateKeyModal()">×</button>
+            </div>
+            
+            <div class="modal-body" id="createKeyFormStep">
+                <div class="form-group">
+                    <label>Key Type</label>
+                    <div class="radio-group" style="display: flex; flex-direction: column; gap: 12px;">
+                        <label class="radio-card" style="display: flex; align-items: flex-start; gap: 12px; padding: 12px; border: 1px solid hsl(var(--border)); border-radius: var(--radius); cursor: pointer;">
+                            <input type="radio" name="keyType" value="sdk" checked style="margin-top: 4px;">
+                            <div>
+                                <div style="font-weight: 500; margin-bottom: 2px;">SDK API Key</div>
+                                <div style="font-size: 12px; color: hsl(var(--muted-foreground));">Trace agent data and integrate with your application.</div>
+                            </div>
+                        </label>
+                        <label class="radio-card" style="display: flex; align-items: flex-start; gap: 12px; padding: 12px; border: 1px solid hsl(var(--border)); border-radius: var(--radius); cursor: pointer;">
+                            <input type="radio" name="keyType" value="payment" style="margin-top: 4px;">
+                            <div>
+                                <div style="font-weight: 500; margin-bottom: 2px;">Payment API Key</div>
+                                <div style="font-size: 12px; color: hsl(var(--muted-foreground));">Query user payment data and verify subscription status.</div>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Name</label>
+                    <input type="text" class="form-input" id="newKeyName" placeholder="e.g. Production Server">
+                </div>
+                
+                <div class="modal-actions">
+                    <button class="secondary-btn" onclick="closeCreateKeyModal()">Cancel</button>
+                    <button class="primary-btn" id="createKeyBtn" onclick="generateKey()">Create Key</button>
+                </div>
+            </div>
+            
+            <div class="modal-body" id="createKeyResultStep" style="display: none;">
+                <div class="success-message" style="margin-bottom: 24px; display: flex; align-items: flex-start; gap: 12px; background: hsl(var(--success-bg)); color: hsl(var(--success-foreground)); padding: 12px; border-radius: var(--radius);">
+                    <span class="icon" style="color: hsl(var(--success));">🎉</span> 
+                    <div>
+                        <div style="font-weight: 600; margin-bottom: 4px;">Your New API Key</div>
+                        <div style="font-size: 13px; color: hsl(var(--foreground));">
+                            <strong>Keep your key safe</strong><br>
+                            Save and store this new key to a secure place. You won’t be able to see it again.
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Secret Key</label>
+                    <div class="copy-field">
+                        <input type="text" id="newKeySecret" readonly value="ak_test_..." style="font-family: monospace;">
+                        <button class="copy-btn" onclick="copyNewKey()">Copy</button>
+                    </div>
+                    <p class="help-text" style="margin-top: 8px; font-size: 12px; color: hsl(var(--muted-foreground));">This key will be shown only once. Copy and store it securely.</p>
+                </div>
+                
+                <div class="modal-actions">
+                    <button class="primary-btn" id="doneKeyBtn" onclick="closeCreateKeyModal()">Done</button>
+                </div>
+            </div>
+
+            <!-- Error Step -->
+            <div class="modal-body" id="createKeyErrorStep" style="display: none;">
+                <div class="error-message" style="margin-bottom: 24px; display: flex; align-items: flex-start; gap: 12px; background: #fee2e2; color: #ef4444; padding: 12px; border-radius: var(--radius);">
+                    <span class="icon" style="color: #ef4444;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
+                    </span> 
+                    <div>
+                        <div style="font-weight: 600; margin-bottom: 4px;">Failed to create API Key</div>
+                        <div style="font-size: 13px; color: #7f1d1d;">
+                            Something went wrong while creating your key. Please try again.
+                        </div>
+                        <div style="font-size: 12px; margin-top: 8px; font-family: monospace; color: #991b1b;">Code: 500_INTERNAL_ERROR</div>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Request ID</label>
+                    <div class="copy-field">
+                        <input type="text" id="errorRequestId" readonly value="req_*************" style="font-family: monospace;">
+                        <button class="copy-btn" onclick="copyRequestId()">Copy</button>
+                    </div>
+                </div>
+                
+                <div class="modal-actions">
+                    <button class="secondary-btn" onclick="closeCreateKeyModal()">Cancel</button>
+                    <button class="primary-btn" onclick="generateKey()">Retry</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

@@ -1,1179 +1,1035 @@
 /**
  * Anyway Agent Tracking Demo Logic
- * 
- * 1. Generates mock Run data (representing "Runs" of a Deliverable).
- * 2. Renders the main Monitor Dashboard.
- * 3. Handles "Drill-down" interaction to show Trace Details.
+ * Refactored for "Agent Traceability" Requirement
  */
 
 const ICONS = {
     eye: `<svg xmlns="http://www.w3.org/2000/svg" class="lucide" width="14" height="14" viewBox="0 0 24 24"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>`,
     bot: `<svg xmlns="http://www.w3.org/2000/svg" class="lucide" width="16" height="16" viewBox="0 0 24 24" style="margin-right:8px"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></svg>`,
-    openai: `<svg width="12" height="12" viewBox="0 0 24 24" fill="#10a37f"><circle cx="12" cy="12" r="12"/></svg>`,
-    anthropic: `<svg width="12" height="12" viewBox="0 0 24 24" fill="#d97757"><circle cx="12" cy="12" r="12"/></svg>`,
-    gemini: `<svg width="12" height="12" viewBox="0 0 24 24" fill="#4b90ff"><circle cx="12" cy="12" r="12"/></svg>`
+    check: `<svg xmlns="http://www.w3.org/2000/svg" class="lucide" width="16" height="16" viewBox="0 0 24 24" style="color:hsl(var(--success))"><polyline points="20 6 9 17 4 12"/></svg>`,
+    copy: `<svg xmlns="http://www.w3.org/2000/svg" class="lucide" width="14" height="14" viewBox="0 0 24 24"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>`
 };
 
-// --- Mock Data Generation ---
+// --- State ---
+const state = {
+    isSampleData: true,
+    hasConnectedSdk: false,
+    runs: [], // Will be populated
+    selectedRun: null,
+    connectSdkStep: 1,
+    sdkWizardKeyStep: 'form', // 'form', 'loading', 'success'
+    testTraceReceived: false,
+    generatedApiKey: null,
+    currentView: 'dashboard'
+};
 
-// "Deliverables" are the products/agents being sold. "Runs" are instances of them.
-const DELIVERABLES = ["Market Analysis Agent", "Code Review Bot", "SEO Generator", "Data Extractor", "Customer Support AI"];
-const CUSTOMERS = ["Acme Corp", "TechStart Inc", "Global AI", "Indie Dev #42", "Apollo Agency"];
+// --- Mock Data ---
 
-const STEPS = [
-    { name: "Input Validation", type: "system", baseCost: 0, duration: 0.05 },
-    { name: "Context Retrieval (Vector DB)", type: "tool", baseCost: 0.002, duration: 0.3 },
-    { name: "LLM Reasoning (GPT-4)", type: "llm", baseCost: 0.03, duration: 2.5 },
-    { name: "Web Search (SerpAPI)", type: "tool", baseCost: 0.01, duration: 1.2 },
-    { name: "Response Formatting", type: "system", baseCost: 0, duration: 0.1 }
+const SAMPLE_AGENTS = [
+    { 
+        name: "Support_Bot_v1", 
+        user: "alice@acme.com",
+        apiKey: "sk_live_" + Math.random().toString(36).substring(2, 15),
+        webhookUrl: "https://api.anyway.sh/webhooks/support_bot_v1"
+    },
+    { 
+        name: "Data_Extractor_Pro", 
+        user: "bob@startuplab.io",
+        apiKey: "sk_live_" + Math.random().toString(36).substring(2, 15),
+        webhookUrl: "https://api.anyway.sh/webhooks/data_extractor_pro"
+    },
+    { 
+        name: "Code_Review_Assistant", 
+        user: "dev@techcorp.com",
+        apiKey: "sk_live_" + Math.random().toString(36).substring(2, 15),
+        webhookUrl: "https://api.anyway.sh/webhooks/code_review_assistant"
+    }
 ];
 
-function generateRuns(count = 15) {
+const SAMPLE_PRODUCTS = [
+    { name: "SEO Optimization Pro", agent: "Search_Bot_v2", price: "$49/mo", strategy: "Subscription", status: "active" },
+    { name: "Data Scraper API", agent: "Data_Extractor_Pro", price: "$0.05/run", strategy: "Per-Use", status: "active" },
+    { name: "Code Reviewer", agent: "Code_Review_Assistant", price: "$19/user", strategy: "Seat-based", status: "draft" }
+];
+
+const SAMPLE_STEPS = [
+    { name: "Retrieve Context", type: "tool", duration: 0.45, cost: 0.0012, tokens: 0 },
+    { name: "Plan Execution", type: "llm", duration: 1.2, cost: 0.015, tokens: 450 },
+    { name: "Search Web", type: "tool", duration: 2.1, cost: 0.005, tokens: 0 },
+    { name: "Generate Response", type: "llm", duration: 3.5, cost: 0.042, tokens: 1200 },
+    { name: "Format Output", type: "system", duration: 0.1, cost: 0, tokens: 0 }
+];
+
+function generateSampleRuns() {
     const runs = [];
-    for (let i = 0; i < count; i++) {
-        const isSuccess = Math.random() > 0.1; // 90% success rate
-        const stepCount = Math.floor(Math.random() * 4) + 2; // 2-5 steps
-        const trace = [];
+    const now = new Date();
+
+    for (let i = 0; i < 5; i++) {
+        const agent = SAMPLE_AGENTS[i % SAMPLE_AGENTS.length];
+        const isSuccess = i !== 2; // Make the 3rd one fail
+        const stepCount = isSuccess ? 4 : 2;
+        
+        let trace = [];
         let totalCost = 0;
         let totalTokens = 0;
         let totalDuration = 0;
 
-        // Generate Trace Steps
         for (let j = 0; j < stepCount; j++) {
-            const stepTemplate = STEPS[Math.floor(Math.random() * STEPS.length)];
-            const duration = stepTemplate.duration * (0.8 + Math.random() * 0.4); // Variance
-            const cost = stepTemplate.baseCost > 0 ? stepTemplate.baseCost * (0.9 + Math.random() * 0.2) : 0;
-            const tokens = stepTemplate.type === 'llm' ? Math.floor(Math.random() * 1000) + 200 : 0;
+            const tmpl = SAMPLE_STEPS[j];
+            const stepCost = tmpl.cost * (0.9 + Math.random() * 0.2);
+            const stepDur = tmpl.duration * (0.8 + Math.random() * 0.4);
             
             trace.push({
-                id: `step_${i}_${j}`,
-                name: stepTemplate.name,
-                description: `Executed ${stepTemplate.name} successfully`, // Added description
-                type: stepTemplate.type,
+                name: tmpl.name,
+                type: tmpl.type,
                 status: (j === stepCount - 1 && !isSuccess) ? "failed" : "success",
-                duration: duration.toFixed(2),
-                cost: cost.toFixed(4),
-                tokens: tokens,
-                input: "User query: 'Analyze market trends for Q3'", // Added input
-                output: "Market data: Growth 5%, Competitors: A, B, C", // Added output
-                details: stepTemplate.type === 'llm' ? `Model: gpt-4-turbo\nInput: ${tokens} tokens` : "System operation"
+                duration: stepDur.toFixed(2),
+                cost: stepCost.toFixed(5),
+                tokens: tmpl.tokens,
+                description: `Executed ${tmpl.name} with params...`,
+                error: (j === stepCount - 1 && !isSuccess) ? "Error: Timeout waiting for upstream service" : null
             });
 
-            totalCost += cost;
-            totalDuration += duration;
-            totalTokens += tokens;
+            totalCost += stepCost;
+            totalDuration += stepDur;
+            totalTokens += tmpl.tokens;
         }
 
-        const deliverableName = DELIVERABLES[Math.floor(Math.random() * DELIVERABLES.length)];
-        const customerName = CUSTOMERS[Math.floor(Math.random() * CUSTOMERS.length)];
-
         runs.push({
-            id: `DEL-${10000 + i}`,
-            timestamp: new Date(Date.now() - i * 1000 * 60 * 45).toLocaleString(), // Spread over time
-            deliverable: deliverableName,
-            customer: customerName,
+            id: `DEL-${10020 + i}`,
+            timestamp: new Date(now - i * 1000 * 60 * 30).toLocaleString(),
+            agentName: agent.name,
+            userEmail: agent.user,
             status: isSuccess ? "success" : "failed",
+            steps: stepCount,
+            tokens: totalTokens,
             cost: totalCost.toFixed(4),
             duration: totalDuration.toFixed(2),
-            tokens: totalTokens,
             trace: trace,
-            output: isSuccess ? `{\n  "result": "Analysis complete",\n  "agent": "${deliverableName}",\n  "data_points": ${Math.floor(Math.random() * 10)}\n}` : `{\n  "error": "Timeout",\n  "code": 504\n}`
+            output: isSuccess ? "Success: Data extracted and formatted." : "Failed: Process terminated unexpectedly."
         });
     }
     return runs;
 }
 
-function generateApiKeys() {
-    return [
-        { id: 1, name: "Production Server", type: "sdk", key: "ak_live_*************3Wg", secret: "sk_live_************************************************", created: "Dec 23", lastUsed: "Dec 29", expiration: null, permissions: [] },
-        { id: 2, name: "Test Environment", type: "sdk", key: "ak_test_*************Zl0s", secret: "sk_test_************************************************", created: "Dec 19", lastUsed: "Dec 20", expiration: null, permissions: [] },
-        { id: 3, name: "Stripe Connect", type: "payment", key: "pk_live_*************ED_4", secret: "sk_live_************************************************", created: "Oct 23", lastUsed: "Dec 28", expiration: null, permissions: [] },
-        { id: 4, name: "Payment Test", type: "payment", key: "pk_test_*************E3Dg", secret: "sk_test_************************************************", created: "Oct 22", lastUsed: "Never", expiration: null, permissions: [] }
-    ];
-}
+// --- Initialization ---
 
-const state = {
-    runs: generateRuns(),
-    selectedRun: null,
-    apiKeys: generateApiKeys(),
-    editingKeyId: null, // Track which key is being edited
-    agents: [], // New Agent State
-    products: [], // New Product Catalog State
-    llmKeys: [], // New LLM Provider Keys
-    currentView: 'dashboard',
-    wizardData: {
-        step: 1,
-        provider: 'openai',
-        keyLabel: '',
-        apiKey: '',
-        agentName: '',
-        agentDesc: '',
-        selectedKeys: []
-    },
-    productWizardData: {
-        step: 1,
-        agentId: null,
-        isStandalone: false,
-        name: '',
-        desc: '',
-        audience: '',
-        useCase: '',
-        competitorPrice: '',
-        manualCost: '',
-        margin: '',
-        suggestedRange: '',
-        suggestedAnchor: '',
-        finalPrice: ''
-    }
-};
-
-// --- DOM Elements ---
-const tableBody = document.getElementById('runsTableBody');
-const tracePanel = document.getElementById('tracePanel');
-const backdrop = document.getElementById('tracePanelBackdrop');
-const closeBtn = document.getElementById('closePanelBtn');
-const chartContainer = document.getElementById('mainChart');
-
-// New DOM Elements
-const dashboardView = document.getElementById('dashboardView');
-const developersView = document.getElementById('developersView'); // NEW
-const productCatalogView = document.getElementById('productCatalogView'); // New
-const settingsIcon = document.getElementById('settingsIcon');
-const settingsDropdown = document.getElementById('settingsDropdown');
-const menuApiKeys = document.getElementById('menuApiKeys');
-const productTableBody = document.getElementById('productTableBody'); // New
-const navDashboard = document.getElementById('nav-dashboard');
-const navProducts = document.getElementById('nav-products'); // New
-
-// Developers & Account Elements
-const sdkKeysTableBody = document.getElementById('sdkKeysTableBody');
-const paymentKeysTableBody = document.getElementById('paymentKeysTableBody');
-const accountPanel = document.getElementById('accountPanel');
-const accountPanelBackdrop = document.getElementById('accountPanelBackdrop');
-const createKeyBackdrop = document.getElementById('createKeyBackdrop');
-const createKeyFormStep = document.getElementById('createKeyFormStep');
-const createKeyResultStep = document.getElementById('createKeyResultStep');
-const createKeyErrorStep = document.getElementById('createKeyErrorStep');
-
-// Agent Modals
-const addAgentBackdrop = document.getElementById('addAgentBackdrop');
-const manageAgentsBackdrop = document.getElementById('manageAgentsBackdrop');
-const addProductBackdrop = document.getElementById('addProductBackdrop'); // New
-const addAgentBtn = document.getElementById('addAgentBtn');
-const manageAgentsBtn = document.getElementById('manageAgentsBtn');
-const emptyState = document.getElementById('emptyState');
-const dashboardContent = document.getElementById('dashboardContent');
-
-// --- Agent Logic ---
-
-function renderDashboard() {
-    if (state.agents.length === 0) {
-        if(emptyState) emptyState.style.display = 'flex';
-        if(dashboardContent) dashboardContent.style.display = 'none';
-    } else {
-        if(emptyState) emptyState.style.display = 'none';
-        if(dashboardContent) dashboardContent.style.display = 'block';
-    }
-}
-
-// --- Add Agent Wizard ---
-
-window.openAddAgentModal = function() {
-    // Reset Wizard Data
-    state.wizardData = {
-        step: 1,
-        agentName: '',
-        agentDesc: '',
-        keys: []
-    };
+document.addEventListener('DOMContentLoaded', () => {
+    state.runs = generateSampleRuns();
+    state.generatedApiKey = "any_sk_live_" + Math.random().toString(36).substring(2, 15);
     
-    // Reset UI
-    document.getElementById('agentNameInput').value = '';
-    document.getElementById('agentDescInput').value = '';
-    document.getElementById('providerSelect').value = 'openai';
-    document.getElementById('keyLabelInput').value = '';
-    document.getElementById('apiKeyInput').value = '';
-    
-    renderConfiguredKeys();
-    window.goToStep(1);
-    addAgentBackdrop.classList.add('active');
-}
-
-window.closeAddAgentModal = function() {
-    addAgentBackdrop.classList.remove('active');
-}
-
-window.goToStep = function(step) {
-    // Validation Step 1 -> 2
-    if (step === 2 && state.wizardData.step === 1) {
-        const name = document.getElementById('agentNameInput').value;
-        if (!name) {
-            alert("Agent Name is required.");
-            return;
-        }
-        state.wizardData.agentName = name;
-        state.wizardData.agentDesc = document.getElementById('agentDescInput').value;
-    }
-    
-    // Validation Step 2 -> 3
-    if (step === 3 && state.wizardData.step === 2) {
-        if (state.wizardData.keys.length === 0) {
-            alert("Please add at least one Provider Key.");
-            return;
-        }
-        
-        // Generate Credentials
-        document.getElementById('generatedAnywayKey').value = "any_wk_" + Math.random().toString(36).substr(2, 16);
-        
-        // Generate Base URLs for each provider
-        const baseUrlContainer = document.getElementById('generatedBaseUrlsContainer');
-        baseUrlContainer.innerHTML = state.wizardData.keys.map(k => `
-            <div class="copy-field" style="margin-bottom: 8px;">
-                <span style="font-size: 11px; width: 60px; display: inline-block; color: var(--text-secondary);">${k.provider}</span>
-                <input type="text" readonly value="https://api.anyway.sh/v1/${k.provider}">
-                <button class="copy-btn">Copy</button>
-            </div>
-        `).join('');
-
-        // Generate Code Example
-        const codeBlock = document.getElementById('integrationCodeBlock');
-        codeBlock.innerHTML = `
-const client = new OpenAI({
-  apiKey: "<span style="color:#059669">ANYWAY_API_KEY</span>",
-  baseURL: "<span style="color:#059669">https://api.anyway.sh/v1/${state.wizardData.keys[0].provider}</span>" // Use corresponding URL
-});`;
-    }
-
-    // Update UI
-    document.querySelectorAll('.step').forEach((el, idx) => {
-        if (idx + 1 === step) el.classList.add('active');
-        else el.classList.remove('active');
-    });
-    
-    document.querySelectorAll('.step-content').forEach((el, idx) => {
-        if (idx + 1 === step) el.classList.add('active');
-        else el.classList.remove('active');
-    });
-    
-    state.wizardData.step = step;
-}
-
-window.addProviderKey = function() {
-    const provider = document.getElementById('providerSelect').value;
-    const label = document.getElementById('keyLabelInput').value;
-    const key = document.getElementById('apiKeyInput').value;
-    
-    if (!label || !key) {
-        alert("Please fill in Label and API Key.");
-        return;
-    }
-    
-    // Unique Label Check
-    if (state.wizardData.keys.some(k => k.label === label)) {
-        alert("Key Label must be unique.");
-        return;
-    }
-    
-    // Max 3 Check
-    if (state.wizardData.keys.length >= 3) {
-        alert("Maximum 3 keys allowed.");
-        return;
-    }
-    
-    state.wizardData.keys.push({
-        id: Date.now(),
-        provider,
-        label,
-        key: key.substring(0, 8) + "...",
-        fullKey: key,
-        showFull: false // Track visibility state
-    });
-    
-    // Clear Inputs
-    document.getElementById('keyLabelInput').value = '';
-    document.getElementById('apiKeyInput').value = '';
-    
-    renderConfiguredKeys();
-}
-
-window.removeProviderKey = function(id) {
-    state.wizardData.keys = state.wizardData.keys.filter(k => k.id !== id);
-    renderConfiguredKeys();
-}
-
-function renderConfiguredKeys() {
-    const list = document.getElementById('configuredKeysList');
-    if (state.wizardData.keys.length === 0) {
-        list.innerHTML = '<div class="empty-keys-msg">No keys added yet.</div>';
-        return;
-    }
-    
-    list.innerHTML = state.wizardData.keys.map(k => `
-        <div class="key-option" style="cursor: default;">
-            <span>${k.provider === 'openai' ? ICONS.openai : k.provider === 'anthropic' ? ICONS.anthropic : ICONS.gemini}</span>
-            <div style="flex:1">
-                <div style="font-weight:500; font-size:13px">${k.label}</div>
-                <div style="font-size:11px; color:var(--text-secondary)">
-                    ${k.provider} • <span style="font-family:monospace">${k.showFull ? k.fullKey : k.key}</span>
-                    <a href="#" onclick="toggleWizardKeyVisibility(${k.id}); return false;" style="margin-left:4px; font-size:10px;">${k.showFull ? 'Hide' : 'Show'}</a>
-                </div>
-            </div>
-            <button class="secondary-btn" style="padding: 2px 8px; height: 24px; font-size: 11px;" onclick="removeProviderKey(${k.id})">Remove</button>
-        </div>
-    `).join('');
-}
-
-window.toggleWizardKeyVisibility = function(id) {
-    const key = state.wizardData.keys.find(k => k.id === id);
-    if (key) {
-        key.showFull = !key.showFull;
-        renderConfiguredKeys();
-    }
-}
-
-window.testConnection = function() {
-    const btn = event.target;
-    const originalText = btn.textContent;
-    btn.textContent = "Testing...";
-    setTimeout(() => {
-        btn.textContent = "Connection Verified ✅";
-        btn.style.borderColor = "var(--success)";
-        btn.style.color = "var(--success)";
-    }, 1500);
-}
-
-window.finishAddAgent = function() {
-    // Create Agent
-    const newAgent = {
-        id: Date.now(),
-        name: state.wizardData.agentName,
-        description: state.wizardData.agentDesc,
-        providerCount: state.wizardData.keys.length,
-        keys: state.wizardData.keys,
-        anywayKey: document.getElementById('generatedAnywayKey').value
-    };
-    state.agents.push(newAgent);
-    
-    closeAddAgentModal();
     renderDashboard();
+    renderDevelopers();
+    setupEventListeners();
+});
+
+function setupEventListeners() {
+    // Trace Panel
+    document.getElementById('closePanelBtn').onclick = closeTracePanel;
+    document.getElementById('tracePanelBackdrop').onclick = closeTracePanel;
+
+    // Navigation
+    document.getElementById('nav-dashboard').onclick = () => switchView('dashboard');
+    document.getElementById('nav-products').onclick = () => switchView('products');
     
-    // Switch to Dashboard View if not already
-    switchView('dashboard');
-}
+    // Dashboard Filters
+    const searchInput = document.getElementById('deliverySearch');
+    const statusSelect = document.getElementById('deliveryStatusFilter');
+    if (searchInput) searchInput.addEventListener('input', filterDashboard);
+    if (statusSelect) statusSelect.addEventListener('change', filterDashboard);
 
-// --- Manage Agents ---
-
-window.openManageAgentsModal = function() {
-    renderAgentList();
-    manageAgentsBackdrop.classList.add('active');
-}
-
-window.closeManageAgentsModal = function() {
-    manageAgentsBackdrop.classList.remove('active');
-}
-
-function renderAgentList() {
-    const list = document.getElementById('agentList');
-    list.innerHTML = state.agents.map(agent => `
-        <div class="agent-list-item" onclick="selectAgent(${agent.id})">
-            <div class="name">${agent.name}</div>
-            <div class="meta">${agent.providerCount} Providers Linked</div>
-        </div>
-    `).join('');
-}
-
-window.selectAgent = function(id) {
-    const agent = state.agents.find(a => a.id === id);
-    if (!agent) return;
-    
-    const detailView = document.getElementById('manageDetailView');
-    
-    // Generate Keys HTML
-    const keysHtml = (agent.keys || []).map(k => `
-        <div class="key-option" style="cursor: default; margin-bottom: 8px;">
-            <span>${k.provider === 'openai' ? ICONS.openai : k.provider === 'anthropic' ? ICONS.anthropic : ICONS.gemini}</span>
-            <div style="flex:1">
-                <div style="font-weight:500; font-size:13px">${k.label}</div>
-                <div style="font-size:11px; color:var(--text-secondary)">
-                    ${k.provider} • <span style="font-family:monospace">${k.showFull ? k.fullKey : k.key}</span>
-                    <a href="#" onclick="toggleAgentKeyVisibility(${agent.id}, ${k.id}); return false;" style="margin-left:4px; font-size:10px;">${k.showFull ? 'Hide' : 'Show'}</a>
-                </div>
-            </div>
-            <button class="secondary-btn" style="padding:2px 8px; font-size:11px;" onclick="removeAgentKey(${agent.id}, ${k.id})">Remove</button>
-        </div>
-    `).join('');
-
-    // Generate Base URLs HTML
-    const baseUrlsHtml = (agent.keys || []).map(k => `
-        <div class="copy-field" style="margin-bottom: 8px;">
-            <span style="font-size: 11px; width: 60px; display: inline-block; color: var(--text-secondary);">${k.provider}</span>
-            <input type="text" readonly value="https://api.anyway.sh/v1/${k.provider}">
-            <button class="copy-btn">Copy</button>
-        </div>
-    `).join('');
-
-    detailView.innerHTML = `
-        <div class="detail-section">
-            <h3>Basic Information</h3>
-            <div class="form-group">
-                <label>Agent Name</label>
-                <input type="text" class="form-input" id="editAgentName" value="${agent.name}">
-            </div>
-            <div class="form-group">
-                <label>Description</label>
-                <textarea class="form-input" id="editAgentDesc" rows="2">${agent.description || ''}</textarea>
-            </div>
-            <button class="primary-btn" onclick="saveAgentInfo(${agent.id})">Save Changes</button>
-        </div>
+    // Close Account Popover when clicking outside
+    document.addEventListener('click', (event) => {
+        const userProfile = document.getElementById('userProfile');
+        const popover = document.getElementById('accountPopover');
         
-        <div class="detail-section">
-            <h3>Provider Keys</h3>
-            <div class="key-selection-list" style="margin-bottom:12px;">
-                 ${keysHtml || '<div class="empty-keys-msg">No keys linked.</div>'}
-            </div>
-            <button class="secondary-btn" onclick="promptAddKey(${agent.id})">+ Link New Key</button>
-        </div>
-        
-        <div class="detail-section">
-            <h3>Anyway Credentials</h3>
-            <div class="form-group">
-                <label>Anyway API Key</label>
-                <div class="copy-field">
-                    <input type="text" readonly value="${agent.anywayKey || 'Not Generated'}" style="font-family:monospace;">
-                    <button class="copy-btn">Copy</button>
-                </div>
-            </div>
-             <div class="form-group">
-                <label>Anyway Base URLs</label>
-                ${baseUrlsHtml}
-            </div>
-        </div>
-        
-        <div class="danger-zone">
-            <h3>Danger Zone</h3>
-            <p style="font-size:12px; color:var(--text-secondary); margin-bottom:12px;">Deleting this agent will permanently disable all associated credentials. Historical data will be preserved.</p>
-            <button class="danger-btn" onclick="deleteAgent(${agent.id})">Delete Agent</button>
-        </div>
-    `;
-}
-
-window.saveAgentInfo = function(id) {
-    const agent = state.agents.find(a => a.id === id);
-    if (!agent) return;
-    
-    const newName = document.getElementById('editAgentName').value;
-    if (!newName) {
-        alert("Agent Name cannot be empty.");
-        return;
-    }
-    
-    agent.name = newName;
-    agent.description = document.getElementById('editAgentDesc').value;
-    
-    renderAgentList();
-    alert("Changes saved successfully.");
-}
-
-window.removeAgentKey = function(agentId, keyId) {
-    const agent = state.agents.find(a => a.id === agentId);
-    if (!agent) return;
-    
-    if (confirm("Remove this key? The agent will no longer be able to use this provider.")) {
-        agent.keys = agent.keys.filter(k => k.id !== keyId);
-        agent.providerCount = agent.keys.length;
-        renderAgentList();
-        selectAgent(agentId); // Refresh detail view
-    }
-}
-
-window.promptAddKey = function(agentId) {
-    const provider = prompt("Enter Provider (openai/anthropic/gemini):", "openai");
-    if(!provider) return;
-    const label = prompt("Enter Key Label:", "New Key");
-    if(!label) return;
-    const key = prompt("Enter API Key:", "sk-...");
-    if(!key) return;
-    
-    const agent = state.agents.find(a => a.id === agentId);
-    agent.keys = agent.keys || [];
-    agent.keys.push({
-        id: Date.now(),
-        provider,
-        label,
-        key: key.substring(0, 8) + "...",
-        fullKey: key
+        if (userProfile && popover) {
+            if (!userProfile.contains(event.target) && !popover.contains(event.target)) {
+                popover.classList.remove('active');
+            }
+        }
     });
-    agent.providerCount = agent.keys.length;
-    renderAgentList();
-    selectAgent(agentId);
 }
 
-window.deleteAgent = function(id) {
-    if(confirm("Are you sure you want to delete this agent? This action cannot be undone.")) {
-        state.agents = state.agents.filter(a => a.id !== id);
-        renderAgentList();
-        document.getElementById('manageDetailView').innerHTML = '<div class="empty-selection">Select an agent to edit</div>';
-        renderDashboard(); // Update background state
-    }
-}
+// --- Navigation Logic ---
 
-
-// --- Rendering Logic ---
-
-function renderTable() {
-    tableBody.innerHTML = state.runs.map(run => `
-        <tr onclick="openRunDetail('${run.id}')" data-testid="row-${run.id}">
-            <td class="id-cell">${run.id}</td>
-            <td>${run.timestamp.split(',')[0]}</td>
-            <td>
-                <div style="font-weight:500">${run.deliverable}</div>
-                <div style="font-size:11px; color:var(--text-secondary)">demo@anyway.sh</div>
-            </td>
-            <td><span class="status-badge ${run.status}">${run.status}</span></td>
-            <td>${run.trace.length} steps</td>
-            <td>${run.tokens}</td>
-            <td class="cost-cell">$${run.cost}</td>
-            <td><button class="view-btn">Trace</button></td>
-        </tr>
-    `).join('');
-}
-
-function renderChart() {
-    // Simple visual bar chart
-    chartContainer.innerHTML = '';
-    const bars = 24;
-    for(let i=0; i<bars; i++) {
-        const height = 20 + Math.random() * 80;
-        const bar = document.createElement('div');
-        bar.className = 'chart-bar';
-        bar.style.height = `${height}%`;
-        chartContainer.appendChild(bar);
-    }
-}
-
-function openRunDetail(id) {
-    const run = state.runs.find(r => r.id === id);
-    if (!run) return;
-
-    state.selectedRun = run;
-
-    // Populate Panel Data
-    document.getElementById('detailDeliveryId').textContent = run.id;
-    const statusEl = document.getElementById('detailStatus');
-    statusEl.textContent = run.status;
-    statusEl.className = `status-badge ${run.status}`;
-    
-    document.getElementById('detailCost').textContent = `$${run.cost}`;
-    document.getElementById('detailDuration').textContent = `${run.duration}s`;
-    document.getElementById('detailTokens').textContent = run.tokens;
-    document.getElementById('detailOutput').textContent = run.output;
-
-    // Render Trace Timeline
-    const timeline = document.getElementById('traceTimeline');
-    timeline.innerHTML = run.trace.map(step => `
-        <div class="trace-step ${step.type} ${step.status}">
-            <div class="step-marker"></div>
-            <div class="step-card">
-                <div class="step-header">
-                    <span class="step-name">${step.name}</span>
-                    <div class="step-meta">
-                        <span>${step.duration}s</span>
-                        <span class="step-cost">$${step.cost}</span>
-                    </div>
-                </div>
-                <div class="step-details">
-                    ${step.details}
-                </div>
-            </div>
-        </div>
-    `).join('');
-
-    // Open Panel
-    tracePanel.classList.add('open');
-    backdrop.classList.add('open');
-}
-
-function closePanel() {
-    tracePanel.classList.remove('open');
-    backdrop.classList.remove('open');
-}
-
-// NEW: Render Developers
-function renderDevelopers() {
-    const sdkKeys = state.apiKeys.filter(k => k.type === 'sdk');
-    const paymentKeys = state.apiKeys.filter(k => k.type === 'payment');
-
-    const renderRow = (key) => {
-        const isEditing = state.editingKeyId === key.id;
-        
-        const nameCellContent = isEditing ? `
-            <div style="display: flex; align-items: center; gap: 8px;">
-                <input type="text" id="edit-key-name-${key.id}" class="form-input" value="${key.name}" 
-                    style="height: 28px; width: 160px; font-size: 13px; padding: 0 8px;" 
-                    onkeydown="handleKeyNameKeydown(event, ${key.id})" autofocus>
-                <button class="primary-btn icon-only" onclick="saveKeyName(${key.id})" title="Save" style="width: 28px; height: 28px; padding: 0;">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                </button>
-                <button class="secondary-btn icon-only" onclick="cancelEditingKeyName()" title="Cancel" style="width: 28px; height: 28px; padding: 0;">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                </button>
-            </div>
-        ` : `
-            <div class="editable-name-container" style="display: flex; align-items: center; gap: 8px;">
-                <span style="font-weight: 500;">${key.name}</span>
-                <button class="view-btn icon-only edit-btn" onclick="startEditingKeyName(${key.id})" title="Rename" style="border:none; padding: 4px; height: auto; color: var(--text-secondary); opacity: 0.6; cursor: pointer;">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-                </button>
-            </div>
-        `;
-
-        return `
-        <tr>
-            <td>${nameCellContent}</td>
-            <td><code class="masked-key" style="font-family:monospace; background: hsl(var(--muted)); padding: 2px 6px; border-radius: 4px;">${key.key}</code></td>
-            <td style="color: var(--text-secondary); font-size: 13px;">${key.created}</td>
-            <td style="color: var(--text-secondary); font-size: 13px;">${key.lastUsed || 'Never'}</td>
-            <td>
-                <button class="secondary-btn icon-only" onclick="deleteApiKey(${key.id})" style="padding: 6px; height: auto;">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
-                </button>
-            </td>
-        </tr>
-        `;
-    };
-
-    if (sdkKeysTableBody) {
-        if (sdkKeys.length === 0) {
-            sdkKeysTableBody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding: 24px; color: var(--text-secondary);">Create an API key to connect your SDK</td></tr>`;
-        } else {
-            sdkKeysTableBody.innerHTML = sdkKeys.map(renderRow).join('');
-        }
-    }
-
-    if (paymentKeysTableBody) {
-        if (paymentKeys.length === 0) {
-            paymentKeysTableBody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding: 24px; color: var(--text-secondary);">Create an API key to connect your payment data</td></tr>`;
-        } else {
-            paymentKeysTableBody.innerHTML = paymentKeys.map(renderRow).join('');
-        }
-    }
-    
-    // Focus input if editing
-    if (state.editingKeyId) {
-        const input = document.getElementById(`edit-key-name-${state.editingKeyId}`);
-        if (input) {
-            input.focus();
-            // Move cursor to end
-            const val = input.value;
-            input.value = '';
-            input.value = val;
-        }
-    }
-}
-
-window.startEditingKeyName = function(id) {
-    state.editingKeyId = id;
-    renderDevelopers();
-}
-
-window.cancelEditingKeyName = function() {
-    state.editingKeyId = null;
-    renderDevelopers();
-}
-
-window.saveKeyName = function(id) {
-    const input = document.getElementById(`edit-key-name-${id}`);
-    if (input && input.value.trim()) {
-        const key = state.apiKeys.find(k => k.id === id);
-        if (key) {
-            key.name = input.value.trim();
-        }
-    }
-    state.editingKeyId = null;
-    renderDevelopers();
-}
-
-window.handleKeyNameKeydown = function(event, id) {
-    if (event.key === 'Enter') {
-        saveKeyName(id);
-    } else if (event.key === 'Escape') {
-        cancelEditingKeyName();
-    }
-}
-
-window.deleteApiKey = function(id) {
-    if(confirm('Are you sure you want to delete this API Key?')) {
-        state.apiKeys = state.apiKeys.filter(k => k.id !== id);
-        renderDevelopers();
-    }
-}
-
-function switchView(viewName) {
-    state.currentView = viewName;
-    
+window.switchView = function(viewId) {
     // Hide all views
-    dashboardView.style.display = 'none';
-    if(productCatalogView) productCatalogView.style.display = 'none';
-    if(developersView) developersView.style.display = 'none';
-    
-    // Update Nav Active State
+    document.querySelectorAll('.view-content').forEach(el => el.style.display = 'none');
     document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
 
-    if (viewName === 'dashboard') {
-        dashboardView.style.display = 'block';
-        if(navDashboard) navDashboard.classList.add('active');
-    } else if (viewName === 'products') {
-        if(productCatalogView) productCatalogView.style.display = 'block';
-        if(navProducts) navProducts.classList.add('active');
-        renderProductCatalog();
-    } else if (viewName === 'developers') {
-        if(developersView) developersView.style.display = 'block';
+    // Show selected view
+    const view = document.getElementById(viewId + 'View');
+    if (view) view.style.display = 'block';
+
+    // Update Nav
+    const navItem = document.getElementById('nav-' + viewId);
+    if (navItem) navItem.classList.add('active');
+    
+    // Render specific view content
+    if (viewId === 'dashboard') {
+        renderDashboard();
+    } else if (viewId === 'developers') {
         renderDevelopers();
-    }
-    
-    // Close dropdown
-    if(settingsDropdown) settingsDropdown.classList.remove('active');
-}
-
-// NEW: Account Panel Functions (Popover)
-window.openAccountPanel = function(event) {
-    if(event) event.stopPropagation();
-    if(accountPanel) {
-        accountPanel.classList.toggle('active');
+    } else if (viewId === 'products') {
+        renderProductCatalog();
     }
 }
 
-window.closeAccountPanel = function() {
-    if(accountPanel) accountPanel.classList.remove('active');
-}
+// --- Dashboard Logic ---
 
-window.navigateToDevelopers = function() {
-    closeAccountPanel();
-    switchView('developers');
-}
-
-// Global Click Listener for Popovers
-document.addEventListener('click', function(event) {
-    // Close Account Panel if clicked outside
-    if(accountPanel && accountPanel.classList.contains('active')) {
-        if (!accountPanel.contains(event.target) && !event.target.closest('.user-profile')) {
-            closeAccountPanel();
-        }
-    }
-});
-
-// NEW: Create Key Modal Functions
-window.openCreateKeyModal = function() {
-    if(createKeyFormStep) createKeyFormStep.style.display = 'block';
-    if(createKeyResultStep) createKeyResultStep.style.display = 'none';
-    if(createKeyErrorStep) createKeyErrorStep.style.display = 'none';
+function renderDashboard() {
+    const banner = document.getElementById('sampleDataBanner');
     
-    const nameInput = document.getElementById('newKeyName');
-    if(nameInput) nameInput.value = '';
-    
-    // Reset radio
-    const radios = document.getElementsByName('keyType');
-    if(radios.length > 0) radios[0].checked = true;
-    
-    if(createKeyBackdrop) createKeyBackdrop.classList.add('active');
-}
-
-window.closeCreateKeyModal = function() {
-    if(createKeyBackdrop) createKeyBackdrop.classList.remove('active');
-}
-
-window.generateKey = function() {
-    const nameInput = document.getElementById('newKeyName');
-    const name = (nameInput && nameInput.value) ? nameInput.value : "New API Key";
-    
-    // Error Simulation: If name contains "fail" or "error", show error state
-    if (name.toLowerCase().includes('fail') || name.toLowerCase().includes('error')) {
-         if(createKeyFormStep) createKeyFormStep.style.display = 'none';
-         if(createKeyResultStep) createKeyResultStep.style.display = 'none';
-         if(createKeyErrorStep) createKeyErrorStep.style.display = 'block';
-         
-         // Generate Mock Request ID
-         const reqId = "req_" + Math.random().toString(36).substr(2, 10) + Math.random().toString(36).substr(2, 4);
-         const reqIdInput = document.getElementById('errorRequestId');
-         if(reqIdInput) reqIdInput.value = reqId;
-         
-         return; 
+    if (state.isSampleData) {
+        banner.style.display = 'flex';
+    } else {
+        banner.style.display = 'none';
     }
 
-    if(createKeyErrorStep) createKeyErrorStep.style.display = 'none';
-
-    // Get Type
-    const radios = document.getElementsByName('keyType');
-    let type = 'sdk';
-    for (const radio of radios) {
-        if (radio.checked) {
-            type = radio.value;
-            break;
-        }
-    }
-
-    const prefix = type === 'sdk' ? 'ak' : 'pk';
-    const env = name.toLowerCase().includes('prod') ? 'live' : 'test';
-    const key = `${prefix}_${env}_${Math.random().toString(36).substr(2, 16)}`;
-    const secret = `sk_${env}_${Math.random().toString(36).substr(2, 24)}`;
-
-    const newKey = {
-        id: Date.now(),
-        name: name,
-        type: type,
-        key: key,
-        secret: secret,
-        created: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-        lastUsed: 'Never',
-        expiration: null,
-        permissions: []
-    };
-
-    state.apiKeys.unshift(newKey);
-    
-    // Show Result
-    if(createKeyFormStep) createKeyFormStep.style.display = 'none';
-    if(createKeyErrorStep) createKeyErrorStep.style.display = 'none';
-    if(createKeyResultStep) createKeyResultStep.style.display = 'block';
-    
-    const secretInput = document.getElementById('newKeySecret');
-    if(secretInput) secretInput.value = secret;
-    
-    renderDevelopers();
+    renderRunsTable(state.runs);
 }
 
-window.copyRequestId = function() {
-    const input = document.getElementById('errorRequestId');
-    if(input) {
-        input.select();
-        document.execCommand('copy'); // Fallback
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-             navigator.clipboard.writeText(input.value);
-        }
-        
-        const btn = event.target;
-        if(btn) {
-            const originalText = btn.textContent;
-            btn.textContent = "Copied!";
-            setTimeout(() => btn.textContent = originalText, 1500);
-        }
-    }
+function filterDashboard() {
+    const searchInput = document.getElementById('deliverySearch');
+    const statusSelect = document.getElementById('deliveryStatusFilter');
+    
+    const query = searchInput ? searchInput.value.toLowerCase() : '';
+    const status = statusSelect ? statusSelect.value : 'all';
+    
+    const filtered = state.runs.filter(run => {
+        const matchesSearch = run.id.toLowerCase().includes(query) || 
+                              run.agentName.toLowerCase().includes(query);
+        const matchesStatus = status === 'all' || run.status === status;
+        return matchesSearch && matchesStatus;
+    });
+    
+    renderRunsTable(filtered);
 }
 
-window.copyNewKey = function() {
-    const input = document.getElementById('newKeySecret');
-    if(input) {
-        input.select();
-        document.execCommand('copy'); // Fallback
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-             navigator.clipboard.writeText(input.value);
-        }
-        
-        const btn = event.target; // Simple way to get the button
-        if(btn) {
-            const originalText = btn.textContent;
-            btn.textContent = "Copied!";
-            setTimeout(() => btn.textContent = originalText, 1500);
-        }
-    }
-}
+function renderRunsTable(runs) {
+    const tbody = document.getElementById('runsTableBody');
+    tbody.innerHTML = '';
 
-
-// --- Event Listeners ---
-
-closeBtn.addEventListener('click', closePanel);
-backdrop.addEventListener('click', closePanel);
-
-// Close on Escape key
-document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') closePanel();
-});
-
-// Settings & Navigation Listeners
-if(settingsIcon) {
-    settingsIcon.addEventListener('click', (e) => {
-        e.stopPropagation();
-        settingsDropdown.classList.toggle('active');
+    runs.forEach(run => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td style="font-family: 'Geist Mono', monospace; font-size: 13px;">${run.id}</td>
+            <td style="color: hsl(var(--muted-foreground)); font-size: 13px;">${run.timestamp}</td>
+            <td>
+                <div style="font-weight: 500;">${run.agentName}</div>
+                <div style="font-size: 11px; color: hsl(var(--muted-foreground));">${run.userEmail}</div>
+            </td>
+            <td><span class="status-badge ${run.status}">${run.status}</span></td>
+            <td>${run.steps}</td>
+            <td>${run.tokens.toLocaleString()}</td>
+            <td style="font-family: 'Geist Mono', monospace;">$${run.cost}</td>
+            <td>
+                <button class="view-btn" onclick="openTracePanel('${run.id}')">Trace</button>
+            </td>
+        `;
+        tbody.appendChild(tr);
     });
 }
 
-document.addEventListener('click', () => {
-    if(settingsDropdown) settingsDropdown.classList.remove('active');
-});
-
-if(settingsDropdown) {
-    settingsDropdown.addEventListener('click', (e) => {
-        e.stopPropagation();
-    });
-}
-
-if(menuApiKeys) {
-    menuApiKeys.addEventListener('click', () => {
-        switchView('developers'); // Changed to developers
-    });
-}
-
-if(navDashboard) {
-    navDashboard.addEventListener('click', () => {
-        switchView('dashboard');
-    });
-}
-
-if(navProducts) {
-    navProducts.addEventListener('click', () => {
-        switchView('products');
-    });
-}
-
-// Global Copy Button Handler
-document.addEventListener('click', (e) => {
-    if (e.target.classList.contains('copy-btn') && e.target.onclick === null) {
-        const input = e.target.previousElementSibling;
-        if (input && input.tagName === 'INPUT') {
-            input.select();
-            // Modern Clipboard API
-            if (navigator.clipboard && navigator.clipboard.writeText) {
-                 navigator.clipboard.writeText(input.value);
-            } else {
-                // Fallback
-                document.execCommand('copy');
-            }
-            
-            const originalText = e.target.textContent;
-            e.target.textContent = 'Copied!';
-            e.target.classList.add('success');
-            setTimeout(() => {
-                e.target.textContent = originalText;
-                e.target.classList.remove('success');
-            }, 1500);
-        }
-    }
-});
-
-// Add listeners for account panel backdrop
-if(accountPanelBackdrop) {
-    accountPanelBackdrop.addEventListener('click', closeAccountPanel);
+function filterTable(status) {
+    const filtered = status === 'all' 
+        ? state.runs 
+        : state.runs.filter(r => r.status === status);
+    renderRunsTable(filtered);
 }
 
 // --- Product Catalog Logic ---
 
 function renderProductCatalog() {
-    if (!productTableBody) return;
+    const tbody = document.getElementById('productTableBody');
+    tbody.innerHTML = '';
     
-    if (state.products.length === 0) {
-        productTableBody.innerHTML = `
+    SAMPLE_PRODUCTS.forEach(p => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td style="font-weight: 500;">${p.name}</td>
+            <td style="color: hsl(var(--muted-foreground));">${p.agent}</td>
+            <td style="font-family: 'Geist Mono', monospace;">${p.price}</td>
+            <td><span style="background: hsl(var(--muted)); padding: 2px 8px; border-radius: 4px; font-size: 12px;">${p.strategy}</span></td>
+            <td><span class="status-badge" style="background: transparent; padding: 0; color: ${p.status === 'active' ? 'hsl(var(--success))' : 'hsl(var(--warning))'}">&#9679; ${p.status}</span></td>
+            <td><button class="view-btn" onclick="openEditProduct('${p.name}')">Edit</button></td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+window.openAddProductModal = function() {
+    document.getElementById('addProductBackdrop').classList.add('active');
+    // Populate agent select
+    const select = document.getElementById('productAgentSelect');
+    select.innerHTML = '<option value="">-- Select an Agent --</option>';
+    SAMPLE_AGENTS.forEach(agent => {
+        select.innerHTML += `<option value="${agent.name}">${agent.name}</option>`;
+    });
+}
+
+window.openEditProduct = function(productName) {
+    const product = SAMPLE_PRODUCTS.find(p => p.name === productName);
+    if (!product) return;
+
+    openAddProductModal();
+    
+    // Update title
+    document.querySelector('#addProductBackdrop h2').textContent = `Edit Product: ${productName}`;
+    
+    // Pre-fill Step 1 (Agent)
+    const agentSelect = document.getElementById('productAgentSelect');
+    if(agentSelect) agentSelect.value = product.agent;
+    
+    // Pre-fill Step 2 (Basic Info)
+    // Note: In a real app, we'd have more fields in SAMPLE_PRODUCTS to map here.
+    // For now, we'll simulate it.
+    const nameInput = document.getElementById('productNameInput');
+    const descInput = document.getElementById('productDescInput');
+    
+    if(nameInput) nameInput.value = product.name;
+    if(descInput) descInput.value = `Description for ${product.name}...`; // Mock data
+
+    // Pre-fill Step 3 (Pricing)
+    const priceInput = document.getElementById('finalPriceInput');
+    if(priceInput) {
+        // Extract number from "$49/mo" -> 49
+        const priceMatch = product.price.match(/[\d\.]+/);
+        if(priceMatch) priceInput.value = priceMatch[0];
+    }
+}
+
+window.closeAddProductModal = function() {
+    document.getElementById('addProductBackdrop').classList.remove('active');
+    // Reset title
+    setTimeout(() => {
+        document.querySelector('#addProductBackdrop h2').textContent = 'Create New Product';
+    }, 300);
+}
+
+window.productGoToStep = function(step) {
+    // Update Indicators
+    for (let i = 1; i <= 4; i++) {
+        const indicator = document.getElementById(`p-step${i}-indicator`);
+        if (indicator) {
+            if (i === step) indicator.classList.add('active');
+            else indicator.classList.remove('active');
+        }
+    }
+    
+    // Update Content
+    for (let i = 1; i <= 4; i++) {
+        const content = document.getElementById(`p-step${i}`);
+        if (content) {
+            if (i === step) content.classList.add('active');
+            else content.classList.remove('active');
+        }
+    }
+}
+
+// --- Account Popover Logic ---
+
+window.toggleAccountPopover = function(event) {
+    event.stopPropagation();
+    const popover = document.getElementById('accountPopover');
+    const isActive = popover.classList.contains('active');
+    
+    // Close any other open dropdowns if needed
+    
+    if (isActive) {
+        popover.classList.remove('active');
+    } else {
+        popover.classList.add('active');
+    }
+};
+
+// Close popover when clicking outside
+document.addEventListener('click', function(event) {
+    const popover = document.getElementById('accountPopover');
+    const profile = document.getElementById('userProfile');
+    
+    if (popover && popover.classList.contains('active')) {
+        if (!popover.contains(event.target) && !profile.contains(event.target)) {
+            popover.classList.remove('active');
+        }
+    }
+});
+
+window.handleAccountAction = function(action) {
+    console.log('Account action:', action);
+    const popover = document.getElementById('accountPopover');
+    if (popover) popover.classList.remove('active');
+    
+    if (action === 'logout') {
+        // Logout logic
+        alert('Logging out...');
+    } else if (action === 'developers') {
+        switchView('developers');
+    }
+};
+
+
+// --- Trace Panel Logic ---
+
+window.openTracePanel = function(runId) {
+    const run = state.runs.find(r => r.id === runId);
+    if (!run) return;
+
+    state.selectedRun = run;
+    
+    // Populate Header
+    document.getElementById('detailDeliveryId').textContent = run.id;
+    const statusBadge = document.getElementById('detailStatus');
+    statusBadge.textContent = run.status;
+    statusBadge.className = `status-badge ${run.status}`;
+
+    // Populate Summary
+    document.getElementById('detailCost').textContent = `$${run.cost}`;
+    document.getElementById('detailDuration').textContent = `${run.duration}s`;
+    document.getElementById('detailTokens').textContent = run.tokens.toLocaleString();
+
+    // Populate Trace
+    const timeline = document.getElementById('traceTimeline');
+    timeline.innerHTML = run.trace.map(step => `
+        <div class="trace-step ${step.status}">
+            <div class="step-marker"></div>
+            <div class="step-card">
+                <div class="step-header">
+                    <div style="display:flex; align-items:center;">
+                        <span class="step-name">${step.name}</span>
+                        <span class="step-type-badge">${step.type}</span>
+                    </div>
+                    <div class="step-cost">$${step.cost}</div>
+                </div>
+                <div class="step-meta">
+                    <span>${step.duration}s</span>
+                    ${step.tokens ? `<span>&bull; ${step.tokens} tokens</span>` : ''}
+                </div>
+                ${step.error ? `<div class="step-error">${step.error}</div>` : ''}
+            </div>
+        </div>
+    `).join('');
+
+    // Populate Artifacts
+    document.getElementById('detailOutput').textContent = run.output;
+
+    // Show Panel
+    document.getElementById('tracePanel').classList.add('open');
+    document.getElementById('tracePanelBackdrop').classList.add('open');
+}
+
+window.closeTracePanel = function() {
+    document.getElementById('tracePanel').classList.remove('open');
+    document.getElementById('tracePanelBackdrop').classList.remove('open');
+}
+
+// --- Connect SDK Modal Logic ---
+
+window.openConnectSdkModal = function() {
+    state.connectSdkStep = 1;
+    state.sdkWizardKeyStep = 'form';
+    state.generatedApiKey = null; // Reset key
+    renderConnectSdkBody();
+    document.getElementById('connectSdkBackdrop').classList.add('active');
+}
+
+window.generateSdkWizardKey = function() {
+    const nameInput = document.getElementById('sdkKeyNameInput');
+    const name = nameInput ? nameInput.value : '';
+    
+    if (!name) {
+        // Simple validation feedback
+        if(nameInput) nameInput.style.borderColor = '#ef4444';
+        return;
+    }
+
+    state.sdkWizardKeyStep = 'loading';
+    renderConnectSdkBody();
+
+    // Simulate API call
+    setTimeout(() => {
+        state.generatedApiKey = "sk_live_" + Math.random().toString(36).substring(2, 20) + Math.random().toString(36).substring(2, 10);
+        state.sdkWizardKeyStep = 'success';
+        
+        // Add to global keys list (mocking backend update)
+        // We assume sdkKeys is defined in the Developers section logic. 
+        // If not accessible, we skip this or define it if we can see the scope.
+        // Based on previous reads, sdkKeys is global.
+        if (typeof sdkKeys !== 'undefined') {
+            sdkKeys.unshift({
+                id: 'sdk_' + Math.random().toString(36).substring(2, 6),
+                name: name,
+                token: state.generatedApiKey,
+                status: 'Active',
+                created: 'Just now',
+                lastUsed: 'Never'
+            });
+            // Update developers view if it exists
+            if (typeof renderDevelopers === 'function') renderDevelopers();
+        }
+        
+        renderConnectSdkBody();
+    }, 1500);
+}
+
+window.closeConnectSdkModal = function() {
+    document.getElementById('connectSdkBackdrop').classList.remove('active');
+}
+
+// --- Agent Management Logic ---
+
+window.openManageAgentsModal = function() {
+    document.getElementById('manageAgentsBackdrop').classList.add('active');
+    renderAgentList();
+}
+
+window.closeManageAgentsModal = function() {
+    document.getElementById('manageAgentsBackdrop').classList.remove('active');
+}
+
+function renderAgentList() {
+    const list = document.getElementById('agentList');
+    if(!list) return;
+    
+    list.innerHTML = SAMPLE_AGENTS.map(agent => `
+        <div class="agent-item" onclick="selectAgent('${agent.name}')">
+            <div style="font-weight: 500;">${agent.name}</div>
+            <div style="font-size: 12px; color: hsl(var(--muted-foreground));">${agent.user}</div>
+        </div>
+    `).join('');
+}
+
+window.selectAgent = function(agentName) {
+    const agent = SAMPLE_AGENTS.find(a => a.name === agentName);
+    if (!agent) return;
+
+    const detailView = document.getElementById('manageDetailView');
+    detailView.innerHTML = `
+        <h3 style="margin-bottom: 8px;">${agent.name}</h3>
+        <p style="color: hsl(var(--muted-foreground)); margin-bottom: 24px;">Owned by ${agent.user}</p>
+        
+        <div class="form-group">
+            <label>API Key</label>
+            <div class="copy-field">
+                <input type="text" readonly value="sk_live_...${Math.random().toString(36).substring(7)}">
+                <button class="copy-btn">Copy</button>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>Webhook URL</label>
+             <input type="text" class="form-input" value="https://api.anyway.sh/webhooks/${agent.name.toLowerCase()}">
+        </div>
+        
+        <div style="margin-top: 32px; padding-top: 24px; border-top: 1px solid hsl(var(--border));">
+            <button class="secondary-btn" style="color: hsl(var(--destructive)); border-color: hsl(var(--destructive));" onclick="alert('Mock delete agent')">Delete Agent</button>
+        </div>
+    `;
+}
+
+window.openAddAgentModal = function() {
+    const name = prompt("Enter Agent Name:");
+    if (name) {
+        SAMPLE_AGENTS.push({ 
+            name: name, 
+            user: "current@user.com",
+            apiKey: "sk_live_" + Math.random().toString(36).substring(2, 15),
+            webhookUrl: `https://api.anyway.sh/webhooks/${name.toLowerCase().replace(/\s+/g, '_')}`
+        });
+        alert(`Agent ${name} added!`);
+        // If Manage modal is open, refresh list
+        if (document.getElementById('manageAgentsBackdrop').classList.contains('active')) {
+            renderAgentList();
+        }
+    }
+}
+
+function updateSdkStepsUI() {
+    for (let i = 1; i <= 3; i++) {
+        const stepEl = document.getElementById(`sdk-step-${i}`);
+        if (!stepEl) continue;
+
+        // Reset
+        stepEl.classList.remove('active');
+        stepEl.style.opacity = '1'; // Reset opacity
+        
+        // Define base content
+        const stepTitles = ["1. Get API Key", "2. Install SDK", "3. Test Trace"];
+        let content = stepTitles[i-1];
+
+        if (i < state.connectSdkStep) {
+            // Completed
+            stepEl.style.color = 'hsl(var(--muted-foreground))';
+            stepEl.style.borderBottomColor = 'transparent';
+            stepEl.innerHTML = `${ICONS.check} <span style="margin-left: 6px;">${content}</span>`;
+        } else if (i === state.connectSdkStep) {
+            // Active
+            stepEl.classList.add('active');
+            stepEl.innerHTML = content;
+        } else {
+            // Future
+            stepEl.style.opacity = '0.5';
+            stepEl.innerHTML = content;
+        }
+    }
+}
+
+function renderConnectSdkBody() {
+    updateSdkStepsUI();
+    const body = document.getElementById('connectSdkBody');
+    
+    if (state.connectSdkStep === 1) {
+        if (state.sdkWizardKeyStep === 'form' || state.sdkWizardKeyStep === 'loading') {
+            body.innerHTML = `
+                <div style="margin-bottom: 24px;">
+                    <h3 style="font-size: 16px; font-weight: 600; margin-bottom: 12px;">Create API Key</h3>
+                    <p style="color: hsl(var(--muted-foreground)); margin-bottom: 24px;">Generate a new key to authenticate your SDK requests.</p>
+                    
+                    <div class="form-group">
+                        <label>Key Name</label>
+                        <input type="text" class="form-input" id="sdkKeyNameInput" placeholder="e.g., My Python SDK Key" value="My Python SDK Key">
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button class="primary-btn" onclick="generateSdkWizardKey()" ${state.sdkWizardKeyStep === 'loading' ? 'disabled' : ''}>
+                        ${state.sdkWizardKeyStep === 'loading' 
+                            ? `<svg class="lucide spin" viewBox="0 0 24 24" width="16" height="16" style="margin-right: 8px; animation: spin 1s linear infinite;"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg> Creating...` 
+                            : 'Generate Key'}
+                    </button>
+                </div>
+            `;
+        } else {
+            // Success State
+            body.innerHTML = `
+                <div style="margin-bottom: 24px;">
+                    <div class="success-message" style="margin-bottom: 24px; display: flex; align-items: flex-start; gap: 12px; background: hsl(var(--success-bg)); color: hsl(var(--success-foreground)); padding: 12px; border-radius: var(--radius);">
+                        <span class="icon" style="color: hsl(var(--success));">🎉</span> 
+                        <div>
+                            <div style="font-weight: 600; margin-bottom: 4px;">API Key Created</div>
+                            <div style="font-size: 13px; color: hsl(var(--foreground));">
+                                <strong>Keep it safe</strong><br>
+                                Save this key securely. You won’t be able to see it again.
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Secret Key</label>
+                        <div class="copy-field">
+                            <input type="text" readonly value="${state.generatedApiKey}" style="font-family: monospace;">
+                            <button class="copy-btn" onclick="copyToClipboard('${state.generatedApiKey}')">Copy</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button class="primary-btn" onclick="nextSdkStep(2)">Next: Install SDK</button>
+                </div>
+            `;
+        }
+    } else if (state.connectSdkStep === 2) {
+        const installCmd = "pip install anyway-sdk";
+        const initCode = `import anyway
+
+anyway.init(
+    api_key="${state.generatedApiKey}"
+)`;
+
+        body.innerHTML = `
+            <div style="margin-bottom: 24px;">
+                <h3 style="font-size: 16px; font-weight: 600; margin-bottom: 12px;">Install SDK</h3>
+                
+                <div style="margin-bottom: 16px;">
+                    <label style="display:block; margin-bottom:8px; font-size:12px; font-weight:500;">1. Install Package</label>
+                    <div class="code-block" style="background: hsl(var(--muted)); padding: 12px; border-radius: 6px; font-family: 'Geist Mono', monospace; display: flex; justify-content: space-between; align-items: center;">
+                        <span>${installCmd}</span>
+                        <button class="copy-btn" style="padding: 4px 8px;" onclick="copyToClipboard('${installCmd}')">Copy</button>
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 16px;">
+                    <label style="display:block; margin-bottom:8px; font-size:12px; font-weight:500;">2. Initialize Client</label>
+                    <div class="code-block" style="background: hsl(var(--muted)); padding: 12px; border-radius: 6px; font-family: 'Geist Mono', monospace; position: relative;">
+                        <pre style="margin:0; white-space: pre-wrap;">${initCode}</pre>
+                        <button class="copy-btn" style="position: absolute; top: 8px; right: 8px; padding: 4px 8px;" onclick="copyToClipboard(\`${initCode}\`)">Copy</button>
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 16px;">
+                    <a href="#" style="color: hsl(var(--foreground)); text-decoration: underline; font-size: 13px;">View API Docs</a>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="secondary-btn" onclick="nextSdkStep(1)">Back</button>
+                <button class="primary-btn" onclick="nextSdkStep(3)">Continue</button>
+            </div>
+        `;
+    } else if (state.connectSdkStep === 3) {
+        body.innerHTML = `
+            <div style="margin-bottom: 24px; text-align: center; padding: 20px 0;">
+                <h3 style="font-size: 16px; font-weight: 600; margin-bottom: 12px;">Send a Test Trace</h3>
+                <p style="color: hsl(var(--muted-foreground)); margin-bottom: 24px;">
+                    Run your python script to send a test delivery. We'll listen for it here.
+                </p>
+                
+                <button id="sendTestBtn" class="primary-btn large" style="width: 100%; justify-content: center; padding: 12px;" onclick="simulateTestTrace()">
+                    Send Test Trace
+                </button>
+
+                <div id="testStatus" style="margin-top: 16px; height: 20px; font-size: 13px;"></div>
+            </div>
+        `;
+    }
+}
+
+window.nextSdkStep = function(step) {
+    state.connectSdkStep = step;
+    renderConnectSdkBody();
+}
+
+window.simulateTestTrace = function() {
+    const btn = document.getElementById('sendTestBtn');
+    
+    btn.disabled = true;
+    btn.textContent = "Waiting for delivery...";
+    btn.innerHTML = `<svg class="lucide spin" viewBox="0 0 24 24" width="16" height="16" style="margin-right: 8px; animation: spin 1s linear infinite;"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg> Waiting...`;
+    
+    // Simulate delay
+    setTimeout(() => {
+        state.testTraceReceived = true;
+        btn.innerHTML = `Test Delivery Received!`;
+        btn.style.backgroundColor = 'hsl(var(--success))';
+        btn.style.borderColor = 'hsl(var(--success))';
+        
+        // Add a "Live" delivery
+        const liveRun = {
+            id: `DEL-LIVE-${Math.floor(Math.random() * 1000)}`,
+            timestamp: "Just now",
+            agentName: "My_First_Agent",
+            userEmail: "me@company.com",
+            status: "success",
+            steps: 3,
+            tokens: 850,
+            cost: "0.0240",
+            duration: "1.80",
+            trace: [
+                { name: "Init", type: "system", status: "success", duration: "0.10", cost: "0.0000" },
+                { name: "Hello World Generation", type: "llm", status: "success", duration: "1.50", cost: "0.0240", tokens: 850 },
+                { name: "Finalize", type: "system", status: "success", duration: "0.20", cost: "0.0000" }
+            ],
+            output: "Hello! This is your first live trace."
+        };
+        
+        state.runs.unshift(liveRun);
+        state.isSampleData = false; // Switch to live mode
+        
+        setTimeout(() => {
+            closeConnectSdkModal();
+            renderDashboard(); // Will hide banner and show new table
+            
+            // Auto open the new trace
+            openTracePanel(liveRun.id);
+            
+            // Show toast
+            showToast("Test trace received! You are now viewing live data.");
+        }, 1000);
+        
+    }, 2000);
+}
+
+function showToast(message, type = 'success') {
+    let container = document.querySelector('.toast-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.className = 'toast-container';
+        document.body.appendChild(container);
+    }
+
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.innerHTML = `
+        ${type === 'success' ? ICONS.check : ''}
+        <span>${message}</span>
+    `;
+    container.appendChild(toast);
+    
+    // Animate in is handled by CSS
+    
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateX(100%)';
+        toast.style.transition = 'all 0.3s ease';
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+}
+
+// --- Developers View Logic ---
+
+// Initial Data
+const sdkKeys = [
+    { id: 'sdk_1', name: 'Default Project Key', token: 'sk_live_...4f8a', status: 'Active', created: 'Oct 24', lastUsed: 'Just now' }
+];
+
+const paymentKeys = [];
+
+function renderDevelopers() {
+    renderKeyTable('sdkKeysTableBody', sdkKeys, 'SDK API Key');
+    renderKeyTable('paymentKeysTableBody', paymentKeys, 'Payment API Key');
+}
+
+function renderKeyTable(tbodyId, keys, typeLabel) {
+    const tbody = document.getElementById(tbodyId);
+    if (!tbody) return;
+
+    if (keys.length === 0) {
+        tbody.innerHTML = `
             <tr>
-                <td colspan="6" style="text-align:center; padding: 40px; color: var(--text-secondary);">
-                    No products created yet. Click "+ Create Product" to start monetizing.
+                <td colspan="6" style="text-align: center; padding: 40px; color: hsl(var(--muted-foreground));">
+                    Create an API key to connect your ${typeLabel === 'SDK API Key' ? 'SDK' : 'payment data'}
                 </td>
             </tr>
         `;
         return;
     }
-    
-    productTableBody.innerHTML = state.products.map(p => `
+
+    tbody.innerHTML = keys.map(key => `
         <tr>
             <td>
-                <div style="font-weight:500">${p.name}</div>
-                <div style="font-size:11px; color:var(--text-secondary)">${p.desc || 'No description'}</div>
+                <input type="text" class="inline-edit" value="${key.name}" onchange="updateKeyName('${key.id}', this.value)" style="width: 100%; max-width: 200px;">
+            </td>
+            <td style="font-family: 'Geist Mono', monospace; color: hsl(var(--muted-foreground)); cursor: pointer;" onclick="copyToClipboard('${key.token}')" title="Click to copy">
+                ${key.token}
             </td>
             <td>
-                ${p.isStandalone ? 
-                    '<span class="status-badge" style="background:var(--bg-body); color:var(--text-secondary)">Standalone</span>' : 
-                    state.agents.find(a => a.id === p.agentId)?.name || 'Unknown Agent'
-                }
+                <span class="status-badge ${key.status === 'Active' ? 'Success' : 'Failed'}" style="background-color: ${key.status === 'Active' ? 'hsl(var(--success-bg))' : '#f3f4f6'}; color: ${key.status === 'Active' ? 'hsl(var(--success))' : 'hsl(var(--muted-foreground))'};">
+                    ${key.status}
+                </span>
             </td>
-            <td>$${p.finalPrice}</td>
-            <td>
-                <div style="font-size:12px">${p.audience === 'b2c' ? 'B2C' : 'B2B'}</div>
+            <td style="color: hsl(var(--muted-foreground)); font-size: 13px;">${key.created}</td>
+            <td style="color: hsl(var(--muted-foreground)); font-size: 13px;">${key.lastUsed}</td>
+            <td style="text-align: right;">
+                <div style="position: relative; display: inline-block;">
+                    <button class="icon-btn" onclick="toggleKeyMenu(event, '${key.id}')">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-more-horizontal"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
+                    </button>
+                    <!-- Dropdown Menu -->
+                    <div id="menu-${key.id}" class="settings-dropdown" style="right: 0; left: auto; min-width: 120px;">
+                        <div class="dropdown-item" onclick="toggleKeyStatus('${key.id}')">
+                            ${key.status === 'Active' ? 'Deactivate' : 'Activate'}
+                        </div>
+                        <div class="dropdown-item" style="color: hsl(var(--destructive));" onclick="deleteKey('${key.id}')">
+                            Delete
+                        </div>
+                    </div>
+                </div>
             </td>
-            <td><span class="status-badge active">Active</span></td>
-            <td><button class="view-btn">Edit</button></td>
         </tr>
     `).join('');
 }
 
-window.openAddProductModal = function() {
-    // Reset Wizard Data
-    state.productWizardData = {
-        step: 1,
-        agentId: null,
-        isStandalone: false,
-        name: '',
-        desc: '',
-        audience: 'b2c',
-        useCase: '',
-        competitorPrice: '',
-        manualCost: '',
-        margin: '',
-        suggestedRange: '',
-        suggestedAnchor: '',
-        finalPrice: ''
+    window.updateKeyName = function(id, newName) {
+        // Find in sdkKeys or paymentKeys
+        let key = sdkKeys.find(k => k.id === id);
+        if (!key) key = paymentKeys.find(k => k.id === id);
+        
+        if (key) {
+            key.name = newName;
+            console.log(`Updated key ${id} name to ${newName}`);
+        }
+    };
+
+    window.toggleKeyMenu = function(event, id) {
+        event.stopPropagation();
+        const menu = document.getElementById(`menu-${id}`);
+        const isActive = menu.classList.contains('active');
+        
+        // Close all other menus
+        document.querySelectorAll('.settings-dropdown').forEach(d => d.classList.remove('active'));
+        
+        if (!isActive) {
+            menu.classList.add('active');
+        }
     };
     
-    // Reset UI Inputs
-    if(document.getElementById('productNameInput')) document.getElementById('productNameInput').value = '';
-    if(document.getElementById('productDescInput')) document.getElementById('productDescInput').value = '';
-    if(document.getElementById('pricingAudience')) document.getElementById('pricingAudience').value = 'b2c';
-    if(document.getElementById('finalPriceInput')) document.getElementById('finalPriceInput').value = '';
-    
-    // Reset Analysis UI
-    document.getElementById('pricingAnalysisPlaceholder').style.display = 'block';
-    document.getElementById('pricingAnalysisResult').style.display = 'none';
-    
-    // Populate Agent Select
-    const agentSelect = document.getElementById('productAgentSelect');
-    if (agentSelect) {
-        if (state.agents.length === 0) {
-            agentSelect.innerHTML = '<option value="" disabled selected>No agents available</option>';
-        } else {
-            agentSelect.innerHTML = '<option value="">-- Select an Agent --</option>' + 
-                state.agents.map(a => `<option value="${a.id}">${a.name}</option>`).join('');
-        }
-    }
-    
-    // Reset Selection UI
-    selectStandaloneProduct(false);
-    
-    window.productGoToStep(1);
-    addProductBackdrop.classList.add('active');
-}
-
-window.closeAddProductModal = function() {
-    addProductBackdrop.classList.remove('active');
-}
-
-window.selectStandaloneProduct = function(isStandalone) {
-    // Toggle if called without args (from UI click)
-    if (typeof isStandalone === 'undefined') {
-        isStandalone = !state.productWizardData.isStandalone;
-    }
-    
-    state.productWizardData.isStandalone = isStandalone;
-    // Corrected ID to match HTML (standaloneOption) and removed non-existent agentOptionCard
-    const standaloneCard = document.getElementById('standaloneOption');
-    const agentSelect = document.getElementById('productAgentSelect');
-    
-    if (isStandalone) {
-        if(standaloneCard) standaloneCard.classList.add('selected');
-        if(agentSelect) {
-            agentSelect.disabled = true;
-            agentSelect.value = "";
-        }
-    } else {
-        if(standaloneCard) standaloneCard.classList.remove('selected');
-        if(agentSelect) agentSelect.disabled = false;
-    }
-}
-
-window.productGoToStep = function(step) {
-    // Validation
-    if (step === 2 && state.productWizardData.step === 1) {
-        if (!state.productWizardData.isStandalone && (!state.agents.length || !document.getElementById('productAgentSelect').value)) {
-            // Allow if standalone, else check agent
-             if(!state.productWizardData.isStandalone) {
-                 const agentId = document.getElementById('productAgentSelect').value;
-                 if(!agentId) {
-                     alert("Please select an agent or choose Standalone Product.");
-                     return;
-                 }
-                 state.productWizardData.agentId = parseInt(agentId);
-             }
-        }
-    }
-    
-    if (step === 3 && state.productWizardData.step === 2) {
-        const name = document.getElementById('productNameInput').value;
-        if (!name) {
-            alert("Product Name is required.");
-            return;
-        }
-        state.productWizardData.name = name;
-        state.productWizardData.desc = document.getElementById('productDescInput').value;
-    }
-    
-    if (step === 4 && state.productWizardData.step === 3) {
-        const price = document.getElementById('finalPriceInput').value;
-        if (!price) {
-            alert("Please set a final price.");
-            return;
-        }
-        state.productWizardData.finalPrice = price;
-    }
-
-    // Update UI
-    document.querySelectorAll('#addProductBackdrop .step').forEach((el, idx) => {
-        if (idx + 1 === step) el.classList.add('active');
-        else el.classList.remove('active');
+    // Close menus when clicking outside
+    document.addEventListener('click', function() {
+         document.querySelectorAll('.settings-dropdown').forEach(d => d.classList.remove('active'));
     });
-    
-    document.querySelectorAll('#addProductBackdrop .step-content').forEach((el, idx) => {
-        if (idx + 1 === step) el.classList.add('active');
-        else el.classList.remove('active');
-    });
-    
-    state.productWizardData.step = step;
-}
 
-window.analyzePricing = function() {
-    const audience = document.getElementById('pricingAudience').value;
-    state.productWizardData.audience = audience;
+    window.toggleKeyStatus = function(id) {
+        let key = sdkKeys.find(k => k.id === id);
+        if (!key) key = paymentKeys.find(k => k.id === id);
+        
+        if (key) {
+            key.status = key.status === 'Active' ? 'Inactive' : 'Active';
+            renderDevelopers();
+        }
+    };
+
+    window.deleteKey = function(id) {
+        if(confirm('Are you sure you want to delete this key?')) {
+            let index = sdkKeys.findIndex(k => k.id === id);
+            if (index !== -1) {
+                sdkKeys.splice(index, 1);
+            } else {
+                index = paymentKeys.findIndex(k => k.id === id);
+                if (index !== -1) {
+                    paymentKeys.splice(index, 1);
+                }
+            }
+            renderDevelopers();
+        }
+    };
+
+    window.copyToClipboard = function(text) {
+        // Create a temporary text area to copy from
+        const textArea = document.createElement("textarea");
+        textArea.value = text;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand("Copy");
+        textArea.remove();
+        
+        // Show tooltip or visual feedback
+        const activeElement = document.activeElement; // The element that triggered this
+        if (activeElement) {
+             // Optional: visual feedback
+        }
+    };
+
+// --- Create API Key Modal Logic ---
+
+window.openCreateKeyModal = function() {
+    document.getElementById('createKeyBackdrop').classList.add('active');
+    // Reset state
+    document.getElementById('createKeyFormStep').style.display = 'block';
+    document.getElementById('createKeyResultStep').style.display = 'none';
+    document.getElementById('createKeyErrorStep').style.display = 'none';
+    document.getElementById('newKeyName').value = '';
+    const typeSelect = document.getElementById('newKeyType');
+    if (typeSelect) typeSelect.value = 'sdk';
     
-    // Simulate AI Analysis
-    const btn = event.target;
-    const originalText = btn.innerHTML;
-    btn.innerHTML = `${ICONS.bot} Analyzing Market Data...`;
-    btn.disabled = true;
-    
-    setTimeout(() => {
-        btn.innerHTML = originalText;
+    // Reset button state
+    const btn = document.getElementById('createKeyBtn');
+    if (btn) {
         btn.disabled = false;
+        btn.innerHTML = 'Create Key';
+    }
+}
+
+window.closeCreateKeyModal = function() {
+    document.getElementById('createKeyBackdrop').classList.remove('active');
+    // If we just created a key, refresh the list
+    if (document.getElementById('createKeyResultStep').style.display === 'block') {
+        renderDevelopers();
+    }
+}
+
+window.generateKey = function() {
+    const btn = document.getElementById('createKeyBtn');
+    const name = document.getElementById('newKeyName').value;
+    const typeSelect = document.getElementById('newKeyType');
+    const type = typeSelect ? typeSelect.value : 'sdk';
+
+    if (!name) {
+        alert('Please enter a key name');
+        return;
+    }
+    
+    // Show loading state
+    if (btn && document.getElementById('createKeyFormStep').style.display === 'block') {
+        btn.disabled = true;
+        btn.innerHTML = `<svg class="lucide spin" viewBox="0 0 24 24" width="16" height="16" style="margin-right: 8px; animation: spin 1s linear infinite;"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg> Creating...`;
+    }
+
+    // Simulate API call
+    setTimeout(() => {
+        // Randomly succeed or fail for demo purposes (mostly succeed)
+        const isSuccess = Math.random() > 0.1; 
+
+        if (isSuccess) {
+            const prefix = type === 'sdk' ? 'sk_live_' : 'pk_live_';
+            const newKey = prefix + Math.random().toString(36).substring(2, 20) + Math.random().toString(36).substring(2, 10);
+            document.getElementById('newKeySecret').value = newKey;
+
+            // Add to list
+            const keyObj = {
+                id: Math.random().toString(36).substring(7),
+                name: name,
+                token: newKey,
+                status: 'Active',
+                created: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+                lastUsed: 'Never'
+            };
+            
+            if (type === 'sdk') {
+                sdkKeys.unshift(keyObj);
+            } else {
+                paymentKeys.unshift(keyObj);
+            }
+            renderDevelopers();
+            
+            document.getElementById('createKeyFormStep').style.display = 'none';
+            document.getElementById('createKeyErrorStep').style.display = 'none';
+            document.getElementById('createKeyResultStep').style.display = 'block';
+        } else {
+            document.getElementById('createKeyFormStep').style.display = 'none';
+            document.getElementById('createKeyResultStep').style.display = 'none';
+            document.getElementById('createKeyErrorStep').style.display = 'block';
+        }
         
-        // Mock Result Logic
-        let min = 19, max = 29;
-        if (audience === 'b2b_small') { min = 49; max = 99; }
-        if (audience === 'b2b_enterprise') { min = 499; max = 999; }
-        
-        document.getElementById('pricingAnalysisPlaceholder').style.display = 'none';
-        document.getElementById('pricingAnalysisResult').style.display = 'block';
-        document.getElementById('suggestedRange').textContent = `$${min} - $${max}`;
-        
-        // Auto-fill a suggested price
-        document.getElementById('finalPriceInput').value = max - 0.01; // .99 trick
-        
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = 'Create Key';
+        }
     }, 1500);
 }
 
-window.finishAddProduct = function() {
-    const newProduct = {
-        id: Date.now(),
-        ...state.productWizardData,
-        created: new Date().toISOString()
-    };
+window.downloadEnvSnippet = function() {
+    const key = document.getElementById('newKeySecret').value;
+    const typeSelect = document.getElementById('newKeyType');
+    const type = typeSelect ? typeSelect.value : 'sdk';
+    const varName = type === 'sdk' ? 'ANYWAY_SDK_KEY' : 'ANYWAY_PAYMENT_KEY';
+    const content = `${varName}=${key}`;
     
-    state.products.push(newProduct);
-    renderProductCatalog();
-    closeAddProductModal();
-    // Switch to products view if not already there
-    switchView('products'); 
+    // Create a temporary text area to copy from
+    const textArea = document.createElement("textarea");
+    textArea.value = content;
+    document.body.appendChild(textArea);
+    textArea.select();
+    document.execCommand("Copy");
+    textArea.remove();
+    
+    const btn = document.querySelector('button[onclick="downloadEnvSnippet()"]');
+    if (btn) {
+        const originalText = btn.innerHTML;
+        btn.innerHTML = 'Copied!';
+        setTimeout(() => btn.innerHTML = originalText, 2000);
+    }
 }
 
-// --- Initialization ---
-
-function init() {
-    if(addAgentBtn) {
-        addAgentBtn.addEventListener('click', openAddAgentModal);
-    }
-
-    if(manageAgentsBtn) {
-        manageAgentsBtn.addEventListener('click', openManageAgentsModal);
-    }
+window.copyNewKey = function() {
+    const keyInput = document.getElementById('newKeySecret');
+    keyInput.select();
+    document.execCommand("Copy");
     
-    renderTable();
-    renderChart();
-    // renderApiKeys(); // REMOVED: Replaced by renderDevelopers on view switch
-    renderDashboard();
-    console.log("Anyway Prototype Loaded. Data:", state);
+    const btn = document.querySelector('button[onclick="copyNewKey()"]');
+    const originalText = btn.innerHTML;
+    btn.innerHTML = 'Copied!';
+    setTimeout(() => btn.innerHTML = originalText, 2000);
 }
 
-init();
+window.copyRequestId = function() {
+    const input = document.getElementById('errorRequestId');
+    input.select();
+    document.execCommand('copy');
+    
+    const copyBtn = input.nextElementSibling;
+    const originalText = copyBtn.textContent;
+    copyBtn.textContent = "Copied!";
+    setTimeout(() => {
+        copyBtn.textContent = originalText;
+    }, 2000);
+}
+
+

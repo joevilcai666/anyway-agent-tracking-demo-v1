@@ -1,155 +1,205 @@
-### 用户画像与解决的核心问题
+**MVP 版本出发点**
 
-- 用户画像：使用 AI 交付可计量成果,并将交付物产品化/服务化收费的**`个人开发者与小团队`**,包括: AI Agency (AI 代理服务商)；Freelancer；小型 SaaS 团队；Agent Studio
-- 解决的问题/JTBD
-    - 我想按“客户/项目/一次交付”准确计算这单的真实成本与毛利，不用靠拍脑袋定价
-    - 我想知道 agent 在交付过程中：做了啥，哪里最贵/最慢/最容易失败 → 好优化成本与稳定性
-    - 我想把交付过程“产品化”：把一次交付变成可复用的服务单元（可比较、可报价、可复盘）
-    - 我想给我的用户一个可解释的账单依据：为什么收这个价（价值）+ 为什么成本这么高（用量/资源）
-    - 我想在不大改代码的情况下快速接入追踪，并且能用于后续自动定价与收款
+Anyway 正处于早期市场需求验证阶段。我们要做的是一个后台系统，帮助 Merchant 连接三个核心环节：成本、计费、收付款；在上游成本环节，我们需要追踪 Agent 完成任务的行为轨迹，通过记录 Agent 的执行步骤来准确计算成本
 
----
-
-### 「Agent 行为追踪」方案思路
-
-### 一、核心定义
-
-<aside>
-
-Agent 一次交付（Delivery）= 一段可重放的执行轨迹（Trace）+ 一组资源消耗（Usage）+ 一组成本口径（Cost）+ 一组可解释产物（Artifacts）
-
-</aside>
-
-**可解释产物说明：**指交付过程中产生的可供用户理解的输出，如生成的文档、分析报告、API 响应结果等，用于向最终用户解释"Agent 做了什么"
-
-### 二、关键问题
-
-**问题 1：数据隐私与信任**
-
-- 拿 Trace 意味着可能获取所有执行数据，存在隐私泄露风险
-- 客户是否愿意接受这种侵入性？如何建立信任？
-
-**问题 2：接入成本与用户体验**
-
-- 不能要求用户手动下载 OpenTelemetry 并嵌入复杂的 agent 系统
-- 如何让客户低成本、便捷地接入追踪能力？
-- 如何在不大幅改动代码的情况下实现监控？
-
-**问题 3：数据完整性**
-
-- 如何监控 agent 的行为？能获取哪些维度的数据？
-- 如何确保数据的准确性和可追溯性？
-
-**问题 4：用户感知**
-
-- 如何让客户（开发者）和他们的最终用户都能理解 agent 的执行过程？
-- Dashboard 如何清晰呈现复杂的追踪信息？
-
-### 三、数据获取方案对比
-
-我们提供四种技术方案，每种方案在接入难度、数据完整性、隐私风险、开发成本上各有权衡：
-
-**方案 1：提供 SDK**
-
-- 客户接入方式：在代码中集成我们的 SDK，通过代码埋点上报数据
-- 优势
-    - 数据完整性高：能获取完整的 agent 执行轨迹和详细信息
-    - 灵活性强：客户可以自定义上报的数据粒度
-- 劣势
-    - 侵入性大：需要修改客户代码，存在隐私顾虑
-    - 信任门槛高：客户为什么要相信我们不滥用数据？
-    - 接入成本高：对客户的技术能力有一定要求
-- 我方开发成本：中等（需要开发多语言 SDK 和文档）
-- MVP 适用性：中等，适合技术能力强且有深度定制需求的客户
-
-**方案 2：提供可本地下载的 Package（基于 OpenTelemetry + LangChain）**
-
-- **客户接入方式：**本地下载我们封装好的 package，配置 API Key 和 endpoint，自动采集 LangChain/Agent 框架的追踪数据
-- **优势**
-    - 标准化：基于 OP+LC 标准，兼容性好, 不用重复造轮子
-    - 自动化程度高：减少手动埋点工作
-    - 数据完整性较高：能捕获框架层面的执行信息
-- **劣势**
-    - 仍需修改代码：客户需要引入 package 并配置
-    - 依赖特定框架：主要支持 LangChain 等主流框架
-- **我方开发成本：可能**高？（需要深度集成 LangChain + OpenTelemetry，并持续维护兼容性）
-- **MVP 适用性：**较高，平衡了易用性和数据质量，适合使用主流 Agent 框架的客户
-
-**方案 3：提供 Gateway（代理层）**
-
-- **客户接入方式：**将调用 API 时的路由到我们的 Gateway；不太确定是否本地下载，但可能需要修改 API endpoint 配置；Agent 本身 workflow 每一步都需要通过 API 去请求
-- **优势**
-    - （不一定，待调研）部署简单：客户无需下载安装，只需改配置
-    - 成本低：我们提供更低价的模型 tokens，又提供给客户更多 incentives
-- **劣势**
-    - 增加延迟：请求需经过我们的服务器，可能影响响应速度
-    - 单点风险：Gateway 故障会影响客户服务
-- **我方开发成本：可能**高？（需要构建高可用的 Gateway 基础设施）
-- **MVP 适用性：可能是最优解，但不太确定，取绝于技术上是否好实现**
-
-**方案 4：Post 上报 + 记账本模式**
-
-- **客户接入方式：**客户自行采集数据，通过我们提供的 API 主动上报关键事件和用量信息
-- **优势**
-    - 隐私友好：客户完全控制上报什么数据，信任成本最低
-    - 接入灵活：不限制技术栈和框架
-    - 轻量级：对客户代码侵入性最小
-    - 我方开发成本低：只需提供数据接收 API 和简单文档
-- **劣势**
-    - 最大问题：要实现自动化上报，那也就是 Gateway 的逻辑了
-    - 数据完整性弱：依赖客户正确采集和上报
-    - 数据真实性无法保证：客户可能上报不准确的数据（没有太大影响，客户有 incentives 去提供准确的数据）
-    - 需要客户理解数据模型：有一定学习成本（但前端设计上可解决）
-- **MVP 适用性：不太行，还是得走 Gateway 的逻辑**
+## 2.2 Who’s It For
 
 <aside>
 💡
 
-Dashboard 用户体验侧/前端展示的方式取决于我们对于上面方案的选择
+**Tip:** List a the main groups of potential customers who this product or feature is being to be built for
 
 </aside>
 
-### 四、Dashboard 集成策略、方案雏形
+**用户画像**
 
-**核心原则**
+- 使用 AI 交付可计量成果,并将交付物产品化/服务化收费的**`个人开发者与小团队`**,包括: AI Agency (AI 代理服务商)；Freelancer；小型 SaaS 团队；Agent Studio
 
-- 强曝光：「Agent 行为追踪」功能必须在 Dashboard 首页可见，不能折叠到子导航
-- 渐进式展示：从总览到详情，支持 drill-down 查询
+## 2.3 Why Build It?
 
-**信息架构建议**
+<aside>
+💡
 
-- **总览卡片**（Dashboard 顶部）
-    - 展示关键指标：总交付次数、总成本、平均耗时、成功率
-    - 快速筛选：按时间、项目、客户维度过滤
-- **交付列表**（主体区域）
-    - 每条记录显示：Delivery ID、时间、客户、状态、成本、耗时
-    - 点击进入详情页，查看完整 Trace 和 Usage 分解
-- **成本分析视图**（可选 Tab）
-    - 按步骤/模型/供应商拆分成本
-    - 支持从总成本 drill-down 到单个 API 调用
+**Tip:** In a few bullet points or sentences, make a case on why you think this product or feature should be built
 
-**Agent 交付过程中能被观测到的**
+</aside>
 
-- 时间 ：开始/结束、每一步耗时、排队/重试时间
-- 资源消耗 ：每一步 LLM tokens、图片像素/秒、向量检索次数、外部 API 次数、CPU/GPU 时间（可先不做）、存储/带宽（可先不做）
-- 失败 ：错误码、重试次数、超时、降级路径等
-- 归属关系 ：这些消耗到底属于哪个用户/项目/交付/版本
+- 解决客户的问题/JTBD
+    - 我想按“客户/项目/一次交付”准确计算这单的真实成本与毛利，不用靠拍脑袋定价
+    - 我想知道 agent 在交付过程中：做了啥，哪里最贵/最慢/最容易失败 → 好优化成本与稳定性
+    - 我想把交付过程“产品化”：把一次交付变成可复用的服务单元（可比较、可报价、可复盘）
+    - 我想给我的用户一个可解释的账单依据：为什么收这个价（价值）+ 成本是多少（用量/资源）
+    - 我想在不大改代码的情况下快速接入追踪，并且能用于后续自动定价与收款
+    
 
-> 交付本质是：本把每一次交付的 “资源账单” 归集到正确的业务对象上，并能复盘过程
+## 2.4 What Is It?
+
+<aside>
+💡
+
+**Tip**: Explain in great detail what the product or feature is, the various levers your team can pull, any important data you have collected and more
+
+</aside>
+
+### 2.4.1 需求概述
+
+MVP 版本围绕 Agent 行为追踪的三个核心能力：
+
+- 通过 SDK 方式让 Merchant 接入 Anyway 平台 Trace 能力
+- 自动追踪 Agent 的执行轨迹（Trace）
+- 在「Dashboard」展示 Agent 的行为数据和成本明细
+
+> 客户的 agent 卖的是一次 Delivery；Delivery 就是一次完整执行的 agent workflow；delivery 由一串 Steps (trace) 构成；每个 Step(trace) 产生 Usage→Cost；所以客户能算毛利、delivery 的平均成本、能解释账单等
 > 
 
-**交付过程拆解成具体的组成部分**
+### 2.4.2 SDK Connect 引导
 
-- 对象（Identity） ： Agent 执行谁的任务？任务中包含了哪些对象？
-- 事件（Events） ：执行任务中，Agent 干了啥？
-- 成本口径（Costing） ：花了多少钱？usage → cost 的映射
-    - 可以考虑增加「聚合查询」的逻辑：按交付汇总成本、耗时、失败；按步骤/供应商拆分
-    - 能从总成本 drill-down 到“哪一步、用的什么模型、多少 tokens、多少钱”
+技术约束：Gateway 无法可靠识别完整 workflow 边界；MVP 选择 SDK 主动标记 Agent Delivery 边界的方式采集 trace
 
-**业务对象**
+**Sample Data 的默认展示**
 
-- Delivery ：一次可收费/可复盘的交付单元（ Agent 交付物）
-- Run ：Delivery 的一次执行（可能重试/多次）
-- Span/Step ：Run 内的一步（LLM 调用、工具调用、检索、爬取、代码执行等）
-- Usage ：可计量消耗（tokens、requests、seconds…）
-- CostLineItem ：Usage 经过定价表计算出来的成本行（可回溯版本）
+- 默认状态
+    - 新 merchant 首次进入 Dashboard 默认展示 Sample Data：Demo Agent Deliveries
+    - UI 顶部必须明确标记：当前是 Sample Data
+- Demo 数据内容要求
+    - 至少 3 个 Demo Deliveries
+    - 每个 Delivery 至少 3-6 个 Steps，展示不同的数据
+    - 具体数据的展示按照真实的样式进行展示
+
+**方案流程概述**
+
+接入流程能跑通的前提下，降低 merchant 接入成本与提升数据信任度
+
+1. 首次登录默认进入 Sample Dashboard，顶部展示 Banner 提示”正在预览 sample data“
+2. 引导进入 “Connect Python SDK” 步骤
+3. Merchant 完成安装
+4. Merchant 触发 Test Trace 验证链路
+5. 出现第一条 Live Delivery 
+
+**顶部 Banner 形态**
+
+- 左侧信息： You’re viewing sample data
+- 中间辅助信息： Connect Python SDK to see your first live Delivery trace
+- 右侧 CTA 按钮： Connect Python SDK
+
+**CTA Connect Python SDK 流程**
+
+- 弹窗结构
+    - 顶部：3 步横向 Checklist（可点击切换）
+        - Get API Key
+        - Install SDK
+        - Test trace
+    - 中间：当前步骤内容（包含复制按钮、简短说明、跳 docs）
+    - 底部：状态区（成功/失败提示 + 下一步 CTA）
+- 步骤一：Create API Key
+    - 复用 Account → Developers 的创建组件与交互步骤
+    - 明确提示：Key 只展示一次
+    - 完成判定 ：API Key created
+- 步骤二：Install SDK
+    - 上半区：一行安装命令 + Copy（参考 GitHub copy pattern）
+    - 下半区：2 个链接
+        - View API docs （文档链接，点击跳转 API Doc），文案上需要做引导点击查看
+        - Troubleshooting install （常见问题：Python 版本、venv）
+    - 完成判定（merchant 确认） ：点击按钮 “Continue“
+        - 同时提示：最终是否成功以 Test trace 为准 “We’ll confirm everything when you send a test trace”
+- 步骤三：Send Test Trace
+    - 主按钮： Send Test Trace
+    - 成功行为：
+        - toast： Test delivery received
+        - 自动切到 Live Dashboard 并跳转到该 Delivery 详情页
+    - 失败行为
+        - 展示错误的状态，目前不太清楚会有具体什么错误，可以先 mock 一下错误状态
+    - 完成判定：收到 test delivery 事件并可查询到该 delivery_id
+- 校验流程的完成状态
+    - 后端需要检查 merchant 是否完成弹窗中的每个步骤：
+        - 未完成时：banner 保持在「Dashboard」顶部展示，弹窗顶部的 checklist 显示未完成状态
+        - 完成时：banner 从顶部消失，merchant 完成引导流程。引导完成的判定标准只有一个硬条件：`test_trace_received == true`
+
+### 2.4.4 Trace（追踪 Agent 的执行轨迹）中需要获取的数据
+
+**需要获取的数据字段定义与层级结构**
+
+- Agent 层：标识发起请求的具体 Agent（通过 Agent ID 区分）
+    - Delivery 层：记录用户向 Agent 发起的单次请求交付（通过 Delivery ID 标识），包含以下字段：
+        - timestamp：请求发起时间
+        - status：交付结果状态（success / fail）
+        - duration：总耗时（从首个 token 到输出完整 artifact）
+        - Execution Trace 层：记录该次交付中 Agent 执行的所有步骤，每个步骤包含以下字段：
+            - name：步骤名称（可由 LLM 生成）
+            - description：一句话总结该步骤做了什么（可由 LLM 生成）
+            - input：输入给 LLM 的 prompt
+            - output：LLM 输出内容（如文档、报告、API 响应等）
+            - tokens：该步骤消耗的 LLM tokens
+            - cost：该步骤费用（美元）
+            - duration：该步骤耗时（可选字段）
+
+### 2.4.5 「Dashboard」展示 Agent 的行为数据和成本明细
+
+**「Dashboard」信息架构**
+
+- **(**一期不做) **总览数据：**Dashboard 顶部
+- **交付列表：**主体区域，每条记录显示 Delivery 的具体数据
+
+**数据核心定义**
+
+- Delivery：Agent 执行一次任务的可计费、可复盘单元；Agent 一次执行 = 一个 Delivery
+- Step：Delivery 内的一步（LLM 调用、工具调用、检索、代码执行等）；Delivery 包含 1..N 个 Steps
+- Usage：可计量消耗（tokens、requests、seconds…），归因到 Step，再汇总到 Delivery
+- Cost：Usage 按定价表映射出的成本（可回溯版本），归因到 Step，再汇总到 Delivery
+- Artifacts：交付过程中产生的可解释产物（文档/报告/API 响应等），用于解释“做了什么”
+
+**Delivery 表格展示**
+MVP 版本采用表格的产品形态，是最直观展示数据的方式；每列数据都必须服务筛选、对比、解释成本
+
+- Delivery ID：唯一标识
+- Timestamp（Created At）
+    - 显示到分钟，含时区；默认排序 desc
+- Agent
+    - 第一行：Agent 名称
+    - 第二行：Users email
+- Status：success / failed/ running（执行中）
+- Steps：该 Delivery 的总步骤数
+- Tokens：该 Delivery 消耗的总 tokens 数
+- Cost：该 Delivery 汇总成本，以 USD 计价
+- Trace（或者叫 Action？）：“Trace” 按钮，点击后打开 Delivery 详情面板
+
+![CleanShot 2025-12-28 at 20.07.02@2x.png](attachment:3adb4804-f59f-47f8-8318-80263ed375a4:CleanShot_2025-12-28_at_20.07.022x.png)
+
+**表格筛选/搜索/排序**
+
+- 全局时间范围：响应 Dashboard 顶部时间范围选择器，支持 start time & end time
+- 筛选：Status（All / Success / Failed）
+- 排序：默认 Timestamp desc；支持 Cost desc、Tokens desc、Steps desc（至少实现 Timestamp/Cost ）
+- 分页：服务端分页 page_size=50（首屏最新 50 条）
+
+**Delivery 详情面板**
+交互：点击表格行或 Trace 按钮 → 右侧 slide-over（不跳转页面，保留列表筛选上下文）
+
+- Header
+    - Delivery ID + Status
+- Summary（固定三项）
+    - Total Cost、Duration、Tokens
+- Execution Trace（Steps 列表/时间线）
+    - 每个 Step 展示：name、type（llm/tool/system）、status、duration、cost（tokens 可选显示在二级信息）
+    - 失败场景：在失败 Step 上展示 error_summary（简短可读）
+- Artifacts & Output
+    - 展示“可解释产物”的预览（文本预览或链接），默认不展示原始 prompt/敏感输入
+
+**数据计算口径**
+
+- Delivery 聚合口径
+    - total_cost = Σ step.cost
+    - total_tokens = Σ step.tokens（仅对 llm 类型有效）
+    - duration = delivery_ended_at - delivery_started_at
+- Status 判定
+    - success：所有 Step 成功完成
+    - failed：存在失败 Step，且 Delivery 已终止
+    - running（可选）：started_at 有值且 ended_at 为空
+- Step 成本归因
+    - 每条 step.cost 必须能回溯：llm model（MVP 可先不在 UI 展示，但接口要预留字段）
+
+**其他需求点**
+
+- 若 Merchant 首次配置 Agent 后没有数据的状态显示
+    - 方案1：设计上提示用户“该 Agent 还没有任何行为数据”
+    - 方案2：帮助 Merchant 发送一条测试请求，并将数据结果展示在 「Dashboard」；目的是让 merchant 不需要等真实数据即可体验到 Trace 功能
